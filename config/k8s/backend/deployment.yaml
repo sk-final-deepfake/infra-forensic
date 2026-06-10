@@ -40,6 +40,8 @@ spec:
                 name: rabbitmq-credentials
             - secretRef:
                 name: s3-config
+            - secretRef:
+                name: app-secrets          # JWT_SECRET_KEY
           readinessProbe:
             httpGet:
               path: /actuator/health

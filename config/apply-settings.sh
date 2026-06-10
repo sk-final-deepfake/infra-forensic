@@ -32,6 +32,7 @@ source config/secrets.env
 : "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required in config/secrets.env}"
 : "${REDIS_PASSWORD:?REDIS_PASSWORD required in config/secrets.env}"
 : "${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD required in config/secrets.env}"
+: "${JWT_SECRET_KEY:?JWT_SECRET_KEY required in config/secrets.env}"
 
 export AWS_PROFILE="${AWS_PROFILE:-forenshield}"
 export AWS_REGION="${AWS_REGION:-ap-northeast-2}"
@@ -85,6 +86,11 @@ kubectl create secret generic rabbitmq-credentials \
   --from-literal=RABBITMQ_PORT=5672 \
   --from-literal=RABBITMQ_USER=forenshield \
   --from-literal=RABBITMQ_PASSWORD="${RABBITMQ_PASSWORD}" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+kubectl create secret generic app-secrets \
+  --namespace forenshield \
+  --from-literal=JWT_SECRET_KEY="${JWT_SECRET_KEY}" \
   --dry-run=client -o yaml | kubectl apply -f -
 
 kubectl create secret generic s3-config \
