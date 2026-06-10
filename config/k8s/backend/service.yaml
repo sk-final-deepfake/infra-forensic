@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: forenshield
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /actuator/health
+spec:
+  type: ClusterIP
+  selector:
+    app: backend
+  ports:
+    - port: 8080
+      targetPort: 8080

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: forenshield
+data:
+  AWS_REGION: ap-northeast-2
+  RABBITMQ_HOST: rabbitmq.forenshield.svc.cluster.local
+  RABBITMQ_PORT: "5672"
+  AI_GATEWAY_URL: http://192.168.0.66:8080
+  SPRING_PROFILES_ACTIVE: prod
+  SERVER_PORT: "8080"
+  REDIS_PORT: "6379"
+  REDIS_SSL: "true"

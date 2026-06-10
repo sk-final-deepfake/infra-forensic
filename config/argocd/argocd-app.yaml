@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: forenshield
+  namespace: argocd
+spec:
+  project: default
+  source:
+    # TODO: Infra 저장소를 GitHub에 푸시한 뒤 실제 URL로 변경
+    repoURL: https://github.com/sk-final-deepfake/infra.git
+    targetRevision: main
+    # 저장소 루트 기준, k8s 매니페스트가 있는 경로
+    path: config/k8s
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: forenshield
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
