@@ -9,6 +9,9 @@ data:
   RABBITMQ_PORT: "5672"
   AI_GATEWAY_URL: http://192.168.0.66:8080
   SPRING_PROFILES_ACTIVE: prod
+  # dev 스키마 변경이 잦은 동안 Hibernate가 테이블을 자동 생성/수정하도록 함
+  # 스키마가 안정되면 validate로 되돌릴 것
+  SPRING_JPA_HIBERNATE_DDL_AUTO: update
   SERVER_PORT: "8080"
   REDIS_PORT: "6379"
   REDIS_SSL: "true"

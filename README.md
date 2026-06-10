@@ -18,6 +18,8 @@ ForenShield AI 프로젝트의 **인프라 구축 · 앱 배포 · GPU 운영 ·
 | **7** | [AI 분석 서버 배포](./7.ai-deploy.md) | EKS AI FastAPI + On-Prem GPU Gateway |
 | **8** | [E2E 통합 테스트](./8.test.md) | 프로덕션 URL 기준 전체 파이프라인 검증 |
 | **9** | [백엔드·프론트엔드 인프라 연결](./md/9.connect-backend-frontend.md) | 실제 코드(`backend-forensic`, `frontend-deepfake`)를 인프라에 연결하는 따라하기 가이드 |
+| **10** | [배포 트러블슈팅 기록 (2026-06-10)](./md/10.troubleshooting-2026-06-10.md) | 503 해결, ALB 헬스체크, Route 53 전환, S3 업로드(sts), Argo CD 설치 전 과정 |
+| **11** | [명령어 정리 (2026-06-10)](./md/11.commands-2026-06-10.md) | 오늘 사용한 모든 명령어 + 각 명령어 설명·용도 치트시트 |
 
 ---
 
@@ -54,4 +56,4 @@ ForenShield AI 프로젝트의 **인프라 구축 · 앱 배포 · GPU 운영 ·
 
 ---
 
-*마지막 업데이트: 2026-06-05*
+*마지막 업데이트: 2026-06-10*
