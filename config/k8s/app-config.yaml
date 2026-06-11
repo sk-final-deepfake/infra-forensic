@@ -7,7 +7,7 @@ data:
   AWS_REGION: ap-northeast-2
   RABBITMQ_HOST: rabbitmq.forenshield.svc.cluster.local
   RABBITMQ_PORT: "5672"
-  AI_GATEWAY_URL: http://192.168.0.66:8080
+  AI_GATEWAY_URL: http://58.127.241.84:8000
   SPRING_PROFILES_ACTIVE: prod
   # dev 스키마 변경이 잦은 동안 Hibernate가 테이블을 자동 생성/수정하도록 함
   # 스키마가 안정되면 validate로 되돌릴 것
