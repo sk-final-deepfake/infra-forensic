@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-fastapi
+  namespace: forenshield
+  labels:
+    app: ai-fastapi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-fastapi
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: ai-fastapi
+    spec:
+      serviceAccountName: forenshield-app
+      nodeSelector:
+        nodegroup: ai-fastapi-ng
+      containers:
+        - name: ai-fastapi
+          image: 877044078824.dkr.ecr.ap-northeast-2.amazonaws.com/forenshield-ai-fastapi:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: HOSTNAME
+              value: "0.0.0.0"
+          envFrom:
+            - configMapRef:
+                name: app-config
+            - secretRef:
+                name: rabbitmq-credentials
+            - secretRef:
+                name: s3-config
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 12
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
