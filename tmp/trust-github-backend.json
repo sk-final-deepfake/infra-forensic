@@ -13,8 +13,8 @@
         },
         "StringLike": {
           "token.actions.githubusercontent.com:sub": [
-            "repo:sk-final-deepfake/frontend-deepfake:ref:refs/heads/main",
-            "repo:sk-final-deepfake/frontend-deepfake:ref:refs/heads/develop"
+            "repo:sk-final-deepfake/backend-forensic:ref:refs/heads/main",
+            "repo:sk-final-deepfake/backend-forensic:ref:refs/heads/develop"
           ]
         }
       }
