@@ -42,18 +42,29 @@ spec:
                 name: s3-config
             - secretRef:
                 name: app-secrets          # JWT_SECRET_KEY
+          # Spring Boot + Hibernate(ddl update) 기동에 40~60초 소요 → startupProbe로 대기
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 18   # 최대 ~3분까지 기동 허용
           readinessProbe:
             httpGet:
               path: /actuator/health
               port: 8080
-            initialDelaySeconds: 30
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
           livenessProbe:
             httpGet:
               path: /actuator/health
               port: 8080
-            initialDelaySeconds: 60
             periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
           resources:
             requests:
               cpu: 250m
