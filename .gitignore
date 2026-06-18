@@ -1,1 +1,4 @@
 config/secrets.env
+.env.example
+rabbitmq-values.local.yaml 
+infra.env
