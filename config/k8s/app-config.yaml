@@ -15,3 +15,4 @@ data:
   SERVER_PORT: "8080"
   REDIS_PORT: "6379"
   REDIS_SSL: "true"
+  ANALYSIS_WORKER_MODE: ai
