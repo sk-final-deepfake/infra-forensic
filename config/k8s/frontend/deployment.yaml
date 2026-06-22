@@ -10,6 +10,13 @@ spec:
   selector:
     matchLabels:
       app: frontend
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      # frontend-ng(t3.medium) pod 상한 17개 — ArgoCD·시스템 Pod로 거의 가득 참
+      # maxSurge 1이면 구 Pod + 신 Pod 동시에 필요해 Pending 발생 → 구 Pod 먼저 종료
+      maxSurge: 0
+      maxUnavailable: 1
   template:
     metadata:
       labels:
