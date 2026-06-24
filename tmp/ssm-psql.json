@@ -1,6 +1,0 @@
-﻿{
-  "commands": [
-    "command -v psql || sudo dnf install -y postgresql15",
-    "PGPASSWORD='admin123$' psql -h forenshield-db.chcswakki5dc.ap-northeast-2.rds.amazonaws.com -U forenshield -d forenshield -t -c 'SELECT 1;'"
-  ]
-}

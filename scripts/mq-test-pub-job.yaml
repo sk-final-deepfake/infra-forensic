@@ -1,0 +1,37 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mq-test-pub
+  namespace: forenshield
+spec:
+  ttlSecondsAfterFinished: 120
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: pub
+          image: python:3.12-slim
+          env:
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-credentials
+                  key: RABBITMQ_PASSWORD
+            - name: RABBITMQ_USER
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-credentials
+                  key: RABBITMQ_USER
+          command:
+            - bash
+            - -c
+            - |
+              pip install -q pika
+              python /script/publish.py
+          volumeMounts:
+            - name: script
+              mountPath: /script
+      volumes:
+        - name: script
+          configMap:
+            name: mq-test-script

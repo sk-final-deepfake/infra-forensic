@@ -1,0 +1,35 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-fix-notifications
+  namespace: forenshield
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: psql
+          image: postgres:16-alpine
+          envFrom:
+            - secretRef:
+                name: db-credentials
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              PGPASSWORD="$POSTGRES_PASSWORD" psql \
+                -h "$POSTGRES_HOST" \
+                -U "$POSTGRES_USER" \
+                -d "$POSTGRES_DB" \
+                -v ON_ERROR_STOP=1 \
+                -f /sql/fix.sql
+              echo "notifications constraint updated"
+          volumeMounts:
+            - name: sql
+              mountPath: /sql
+      volumes:
+        - name: sql
+          configMap:
+            name: db-migrate-sql

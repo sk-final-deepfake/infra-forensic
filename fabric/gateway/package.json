@@ -1,0 +1,19 @@
+{
+  "name": "forenshield-fabric-anchor-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "description": "REST gateway: ForenShield BE -> Hyperledger Fabric anchor chaincode",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.12.6",
+    "@hyperledger/fabric-gateway": "^1.7.1",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  }
+}

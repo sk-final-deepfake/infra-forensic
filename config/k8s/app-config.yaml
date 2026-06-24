@@ -16,4 +16,10 @@ data:
   REDIS_PORT: "6379"
   REDIS_SSL: "true"
   ANALYSIS_WORKER_MODE: ai
+  # 블록체인 — Fabric Gateway on EC2 (21.fabric-gateway-quickstart.md)
   BLOCKCHAIN_ANCHOR_ENABLED: "false"
+  # EC2 배포 후 private IP로 설정 (print-be-config.sh 출력 참고):
+  # BLOCKCHAIN_ANCHOR_ENABLED: "true"
+  # BLOCKCHAIN_ANCHOR_MODE: "http"
+  # BLOCKCHAIN_ANCHOR_URL: "http://10.0.0.0:8088/api/v1/anchor"
+  # BLOCKCHAIN_ANCHOR_NETWORK: "hyperledger-fabric-forenshield"

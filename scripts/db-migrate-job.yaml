@@ -1,0 +1,41 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-create-missing-tables
+  namespace: forenshield
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: psql
+          image: postgres:16-alpine
+          envFrom:
+            - secretRef:
+                name: db-credentials
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              echo "Connecting to $POSTGRES_HOST ..."
+              PGPASSWORD="$POSTGRES_PASSWORD" psql \
+                -h "$POSTGRES_HOST" \
+                -U "$POSTGRES_USER" \
+                -d "$POSTGRES_DB" \
+                -v ON_ERROR_STOP=1 \
+                -f /sql/db-create-missing-tables.sql
+              echo "Listing new tables:"
+              PGPASSWORD="$POSTGRES_PASSWORD" psql \
+                -h "$POSTGRES_HOST" \
+                -U "$POSTGRES_USER" \
+                -d "$POSTGRES_DB" \
+                -c "\dt evidence_manifests; \dt blockchain_anchors;"
+          volumeMounts:
+            - name: sql
+              mountPath: /sql
+      volumes:
+        - name: sql
+          configMap:
+            name: db-migrate-sql

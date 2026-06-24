@@ -1,4 +1,37 @@
+# --- Secrets & local env (절대 커밋 금지) ---
 config/secrets.env
-.env.example
-rabbitmq-values.local.yaml 
-infra.env
+config/infra.env
+.env
+.env.local
+.env.production
+.env.*
+!.env.example
+
+# RabbitMQ Helm — 실제 비밀번호 포함
+rabbitmq-values.local.yaml
+rabbitmq-values.yaml
+tmp/rabbitmq-values.yaml
+
+# 운영 스크래치 (DB 비밀번호 등)
+tmp/ssm-psql.json
+
+# --- Fabric (EC2 런타임 생성물) ---
+fabric/gateway/node_modules/
+fabric/gateway/.env
+fabric/.fabric-runtime/
+
+# fabric 단독 git init 잔여물 (Infra 모노레포에 포함 시)
+fabric/.git/
+
+# --- Terraform 로컬 상태 (사용 시) ---
+terraform.tfvars
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# --- 인증서 / 키 ---
+*.pem
+
+# --- OS ---
+.DS_Store
+Thumbs.db

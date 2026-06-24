@@ -21,6 +21,9 @@ ForenShield AI 프로젝트의 **인프라 구축 · 앱 배포 · GPU 운영 ·
 | **10** | [트러블슈팅 (→ 9장 통합)](./md/10.troubleshooting-2026-06-10.md) | 9번 문서로 리다이렉트 |
 | **11** | [명령어 정리 (→ 9장 통합)](./md/11.commands-2026-06-10.md) | 9번 문서로 리다이렉트 |
 | **14** | [일일 비용 절감 — EKS · RDS 중지/재시작](./md/14.daily-cost-shutdown.md) | 퇴근 시 컴퓨팅 중지 · 출근 시 복구 (매일 루틴) |
+| **20** | [Hyperledger Fabric 적용 체크리스트](./md/20.hyperledger-fabric-apply.md) | INF·BE·FE 역할 · HTTP 계약 |
+| **21** | [Fabric Gateway EC2 요약](./md/21.fabric-gateway-quickstart.md) | EC2 아키텍처 · SG 요약 |
+| **22** | [Fabric EC2 콘솔·CLI 완전 따라하기](./md/22.fabric-ec2-full-runbook.md) | **EC2 생성부터 Fabric·EKS 연결까지** |
 
 ---
 
