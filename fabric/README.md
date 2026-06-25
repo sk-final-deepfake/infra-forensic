@@ -1,18 +1,15 @@
 # ForenShield — Hyperledger Fabric (PoC)
 
-**권장 배포:** AWS **EC2** (EKS와 동일 VPC) — GPU On-Prem과 분리  
-**BE 연동:** 이미 `HttpBlockchainAnchorClient` 완료
+**배포:** EC2 (EKS와 동일 VPC) · **문서:** [`../md/fabric.md`](../md/fabric.md)
 
-## EC2 빠른 시작
+## 빠른 시작 (EC2 SSM)
 
 ```bash
-sudo bash scripts/install-ec2-prereqs.sh   # 최초 1회, 재로그인
+sudo bash scripts/install-ec2-prereqs.sh   # 최초 1회, 재접속
 bash scripts/setup-all.sh
 bash scripts/start-gateway.sh
-bash scripts/print-be-config.sh            # EKS ConfigMap URL
+bash scripts/print-be-config.sh
 ```
-
-가이드: [`../md/22.fabric-ec2-full-runbook.md`](../md/22.fabric-ec2-full-runbook.md) (콘솔·CLI 전체) · [`../md/21.fabric-gateway-quickstart.md`](../md/21.fabric-gateway-quickstart.md) (요약)
 
 ## 디렉터리
 
@@ -20,11 +17,7 @@ bash scripts/print-be-config.sh            # EKS ConfigMap URL
 |------|------|
 | `chaincode/anchor/` | 해시 앵커 chaincode (Go) |
 | `gateway/` | REST `POST /api/v1/anchor` |
-| `scripts/install-ec2-prereqs.sh` | EC2 Ubuntu 패키지 |
-| `scripts/setup-all.sh` | Fabric test-network + deploy |
-| `scripts/print-be-config.sh` | `BLOCKCHAIN_ANCHOR_URL` 출력 |
+| `scripts/` | install · setup · start-gateway |
 | `systemd/` | Gateway 자동 시작 (선택) |
 
-## BE 계약
-
-[`backend/.../integrations/blockchain.md`](../../backend/backend-forensic/docs/integrations/blockchain.md)
+BE 계약: [`backend/.../blockchain.md`](../../backend/backend-forensic/docs/integrations/blockchain.md)

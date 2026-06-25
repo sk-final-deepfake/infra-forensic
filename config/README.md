@@ -1,6 +1,6 @@
 # ForenShield — Settings (Step 3)
 
-`3.settings.md` 기준 K8s Secret · ConfigMap · IRSA 파일 모음.
+`md/settings.md` 기준 K8s Secret · ConfigMap · IRSA 파일 모음. 상세: [`../md/settings.md`](../md/settings.md)
 
 ## 파일
 

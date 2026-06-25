@@ -1,8 +1,7 @@
-# ForenShield AI — GPU 자원 활용 가이드
+# GPU 자원 활용 가이드
 
-> **문서 시리즈:** [README](./README.md) · **다음:** [7. AI 배포](./7.ai-deploy.md)  
-> **대상:** On-Prem RTX 5080 GPU Gateway + EKS AI FastAPI Pod  
-> **하드웨어:** NVIDIA RTX 5080 (VRAM 16GB), Ubuntu Server 24.04 LTS
+> **관련:** [handbook.md](./handbook.md) · [deployment.md](./deployment.md)  
+> **대상:** On-Prem RTX 5080 + EKS AI FastAPI · VRAM 16GB
 
 제한된 **단일 GPU** 환경에서 영상·음성·이미지 멀티모달 AI 추론이 상호 간섭·OOM 없이 안정적으로 동작하도록 **자원 할당 전략**, **우선순위**, **큐 처리**, **대용량 파일 기준**, **VRAM 초과 대응**을 정리한 문서입니다.
 
@@ -72,7 +71,7 @@ OS / CUDA 예약:       ~1 GB
 
 - GPU Gateway 기동 시: **자주 쓰는 1개 모델만** 상주 로드 (기본: 영상 Xception 또는 요청 빈도 최다 모델).
 - 모달리티 전환 시: 이전 모델 `unload` → `torch.cuda.empty_cache()` → 신규 모델 로드.
-- S3 모델 경로: `s3://forenshield-models/{version}/` ([7. AI 배포](./7.ai-deploy.md) 참고).
+- S3 모델 경로: `s3://forenshield-models/{version}/` ([deployment.md](./deployment.md) 참고).
 
 ---
 
@@ -162,7 +161,7 @@ sequenceDiagram
 | ACK | 처리 성공 후 `basic_ack` | 실패 시 `nack` + requeue 제한 |
 | 타임아웃 | GPU infer 30분+ (대용량 영상) | 메시지 TTL·consumer timeout 조정 |
 
-상세 배포: [7. AI 배포](./7.ai-deploy.md), [6. Backend](./6.backend-deploy.md)
+상세 배포: [deployment.md](./deployment.md)
 
 ---
 
@@ -351,7 +350,7 @@ aws s3 ls s3://forenshield-evidence/
 curl http://192.168.0.50:8080/health
 ```
 
-**초기 주차에는 Step 6 생략.** Phase 1 완료 후 [7. AI 배포](./7.ai-deploy.md) 진행.
+**초기 주차에는 Step 6 생략.** Phase 1 완료 후 [deployment.md](./deployment.md) 진행.
 
 ### Phase 1 완료 체크리스트
 

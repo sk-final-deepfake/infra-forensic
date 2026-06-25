@@ -1,8 +1,8 @@
-# 9. 백엔드 · 프론트엔드 인프라 연결 가이드 (따라하기)
+# 앱 배포 가이드 (백엔드 · 프론트엔드 · EKS 연결)
 
-> **문서 시리즈:** [README](../README.md) · **관련:** [3. Settings](./3.settings.md) · [5. Frontend](./5.frontend-deploy.md) · [6. Backend](./6.backend-deploy.md)
-> **대상 코드:** `backend/backend-forensic` (Spring Boot 3.5) · `frontend/frontend-deepfake` (Next.js 16)
-> **전제:** Terraform 인프라 구축 완료 (RDS · Redis · RabbitMQ · S3 · EKS · ALB · ECR · 도메인)
+> **관련:** [handbook.md](./handbook.md) · [settings.md](./settings.md) · [fabric.md](./fabric.md)  
+> **대상:** `backend/backend-forensic` · `frontend/frontend-deepfake`  
+> **전제:** AWS 인프라 구축 완료 (RDS · EKS · ALB · ECR)
 
 인프라는 다 만들어졌으니, 이제 **우리가 작성한 백엔드/프론트엔드 코드를 그 인프라에 "연결"하는 작업**을 합니다.
 이 문서는 위에서부터 순서대로 그대로 따라하면 되도록 작성했습니다.
@@ -101,7 +101,7 @@ kubectl get nodes
 kubectl get ns forenshield
 ```
 
-> `kubectl get nodes`에서 노드가 안 보이면 VPN 또는 EKS 접근 권한 문제입니다. [tistory-infra-troubleshooting.md](./tistory-infra-troubleshooting.md) 참고.
+> `kubectl get nodes`에서 노드가 안 보이면 VPN 또는 EKS 접근 권한 문제입니다. [handbook.md § 트러블슈팅](./handbook.md#8-트러블슈팅) 참고.
 
 ---
 
@@ -828,10 +828,10 @@ kubectl get ingress -n forenshield      # ADDRESS에 ALB DNS가 뜰 때까지 1~
 | 4   | 업로드 API 직접 | `curl -F "file=@test.mp4" https://forensheildjangdochi.com/api/evidences/upload` | 200 + 해시 응답                 |
 | 5   | S3 저장 확인   | `aws s3 ls s3://forenshield-evidence-877044078824/original/`                     | 업로드한 파일 존재                  |
 | 6   | 브라우저 E2E   | UI에서 파일 업로드                                                                      | 성공 응답, DevTools에 CORS 에러 없음 |
-| 7   | DB 기록 확인   | RDS에 evidence 레코드 조회 ([2.PostgreSQL_명령어.md](./2.PostgreSQL_명령어.md))              | 메타데이터 행 존재                  |
+| 7   | DB 기록 확인   | RDS에 evidence 레코드 조회 (kubectl debug Pod + psql)              | 메타데이터 행 존재                  |
 
 
-전체 파이프라인(AI 분석 포함) 검증은 [8.test.md](./8.test.md)로 이어집니다.
+전체 파이프라인(AI 분석 포함) 검증은 [gpu.md](./gpu.md) · 사이트 업로드 테스트로 이어집니다.
 
 ---
 
@@ -1733,7 +1733,7 @@ git push -u origin main
 
 - [ ] **Argo CD admin 비밀번호 변경** (최우선)
 - [ ] `SPRING_JPA_HIBERNATE_DDL_AUTO` `update` → `validate` 복원
-- [ ] E2E 통합 테스트 ([8.test.md](./8.test.md))
+- [ ] E2E 통합 테스트 (업로드 · 로그인 · AI 분석)
 - [ ] (선택) 미사용 `forenshield-alb` Terraform 정리
 
 ### 11.6 로그 확인 치트시트
@@ -1749,4 +1749,36 @@ curl https://forensheildjangdochi.com/actuator/health
 
 ---
 
-*작성일: 2026-06-10 · 통합본 (연결 가이드 + 트러블슈팅 + 명령어)*
+## 부록: CI/CD · Argo CD
+
+일상 배포는 **수동 kubectl 없이** Git push만 하면 됩니다.
+
+```text
+backend-forensic / frontend-deepfake / ai-forensic  push
+  → GitHub Actions (빌드 · ECR push, 태그 = git SHA)
+  → infra-forensic  config/k8s/*/deployment.yaml  image 갱신
+  → Argo CD Auto Sync
+  → EKS Rolling Update
+```
+
+| 앱 | ECR | 매니페스트 |
+|----|-----|-----------|
+| backend | `forenshield-backend` | `config/k8s/backend/` |
+| frontend | `forenshield-frontend` | `config/k8s/frontend/` |
+| ai-fastapi | `forenshield-ai-fastapi` | `config/k8s/ai-fastapi/` |
+
+**확인:**
+
+```bash
+kubectl get application forenshield -n argocd
+kubectl get pods -n forenshield
+kubectl get deployment backend -n forenshield -o jsonpath='{.spec.template.spec.containers[0].image}'
+```
+
+**롤백:** infra-forensic에서 image tag를 이전 SHA로 revert → push → Argo sync.
+
+**Argo CD UI:** `kubectl port-forward svc/argocd-server -n argocd 8443:443` → `https://localhost:8443`
+
+---
+
+*작성일: 2026-06-10 · 통합본 (연결 + 트러블슈팅 + CI/CD)*

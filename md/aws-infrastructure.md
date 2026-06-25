@@ -1,9 +1,8 @@
-# ForenShield AI — AWS 인프라 구축 가이드 (Terraform)
+# AWS 인프라 구축 가이드
 
-> **문서 시리즈:** [README](./README.md) · **다음:** [3. Settings](./3.settings.md)  
-> **대상:** DevOps · 인프라 담당  
-> **관련 문서:** [3. Settings](./3.settings.md) · [4. Data Layer](./4.data-layer-deploy.md)  
-> **리전:** `ap-northeast-2` · **프로젝트:** `forenshield`
+> **관련:** [handbook.md](./handbook.md) · [settings.md](./settings.md) · [deployment.md](./deployment.md)  
+> **리전:** `ap-northeast-2` · **프로젝트:** `forenshield`  
+> **참고:** 이미 구축 완료된 팀은 [handbook.md](./handbook.md)만 보면 됩니다.
 
 의존성 순서대로 진행합니다. 상위 단계 완료 전 하위 단계로 넘어가지 않습니다.
 
@@ -943,7 +942,7 @@ VPN만 만들고 SG가 막혀 있으면 통신이 안 됩니다.
 
 **콘솔:** VPC → **Security groups** → `forenshield-sg-eks-node` / `forenshield-sg-vpn` 인바운드·아웃바운드 규칙 확인.
 
-GPU Gateway 포트: **8000** ( [`7.ai-deploy.md`](./7.ai-deploy.md) 참고)
+GPU Gateway 포트: **8000** ([deployment.md](./deployment.md) 참고)
 
 ---
 
@@ -955,7 +954,7 @@ AWS 콘솔만으로는 **터널 UP**이 되지 않습니다. On-Prem에서 IPSec
 2. On-Prem 라우터/방화벽에 **정적 라우트** 추가:  
    `10.0.0.0/16` → AWS VPN 터널 인터페이스
 3. GPU 서버 사설 IP 고정: 예) `192.168.0.66`
-4. GPU Gateway 기동: `0.0.0.0:8000` listen (`systemd` — [`7.ai-deploy.md`](./7.ai-deploy.md) §3)
+4. GPU Gateway 기동: `0.0.0.0:8000` listen (`systemd` — [deployment.md](./deployment.md) 참고)
 5. On-Prem에서 AWS 쪽 ping 테스트 (터널 UP 후):  
    `ping 10.0.10.x` (EKS 노드 Private IP)
 
@@ -978,8 +977,7 @@ kubectl apply -f config/k8s/app-config.yaml
 kubectl rollout restart deployment/ai-fastapi -n forenshield
 ```
 
-> 공인 IP 직통 가이드: [`12.ai-cicd-argocd-deploy.md`](./12.ai-cicd-argocd-deploy.md)  
-> VPN 정식 가이드: [`7.ai-deploy.md`](./7.ai-deploy.md)
+> AI 배포: [deployment.md](./deployment.md) · GPU: [gpu.md](./gpu.md)
 
 ---
 
@@ -1630,7 +1628,7 @@ kubectl run mq-test --rm -it --restart=Never -n forenshield \
 | Health Check | `/health`                    |
 
 
-> EKS 환경에서는 **AWS Load Balancer Controller + Ingress**로 ALB를 생성하는 것이 일반적입니다 (`md/5.frontend-deploy.md`).  
+> EKS 환경에서는 **AWS Load Balancer Controller + Ingress**로 ALB를 생성하는 것이 일반적입니다 ([deployment.md](./deployment.md)).  
 > 아래는 **수동 ALB** 생성 CLI 예시입니다.
 
 ### AWS CLI (수동 ALB 예시)

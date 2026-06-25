@@ -1,8 +1,6 @@
-# ForenShield AI — 환경변수 · Secret 관리 가이드
+# 환경변수 · Secret · RDS 관리
 
-> **문서 시리즈:** [README](./README.md) · **이전:** [2. Terraform](./2.Terraform%20architecture.md) · **다음:** [4. Data Layer](./4.data-layer-deploy.md)  
-> **대상:** Backend · AI FastAPI · Frontend · On-Prem GPU Gateway  
-> **관련 문서:** [2. Terraform architecture](./2.Terraform%20architecture.md) · [4. Data Layer](./4.data-layer-deploy.md)  
+> **관련:** [handbook.md](./handbook.md) · [deployment.md](./deployment.md) · [config/README](../config/README.md)  
 > **Namespace:** `forenshield`
 
 소스코드 하드코딩으로 인한 기밀 데이터(DB 비밀번호, S3 키 등) 유출을 방지하고, 로컬(Windows)과 배포(Docker/EKS) 환경을 **코드 수정 없이** 전환할 수 있도록 환경변수 인프라를 정립합니다.
@@ -241,4 +239,39 @@ bash config/apply-settings.sh
 
 ---
 
-*문서 버전: 2026-06-05 · Sprint 4*
+## 부록 A — RDS 접속 · 관리자 계정
+
+RDS는 VPC 내부 — 로컬에서 직접 접속 대신 **kubectl debug Pod** 사용.
+
+```powershell
+kubectl get secret db-credentials -n forenshield -o json | ConvertFrom-Json | ForEach-Object {
+  $_.data.PSObject.Properties | ForEach-Object {
+    Write-Host "$($_.Name) = $([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($_.Value)))"
+  }
+}
+```
+
+| 항목 | 값 |
+|------|-----|
+| Host | `forenshield-db.chcswakki5dc.ap-northeast-2.rds.amazonaws.com` |
+| DB / User | `forenshield` |
+
+비밀번호에 `$` 있으면 **작은따옴표**로 감싸기.
+
+관리자 INSERT 등 상세 SQL은 backend `users` 테이블 스키마 기준으로 `psql` Pod에서 실행.
+
+---
+
+## 부록 B — Git 유출 시 비밀번호 교체
+
+`.env` 등이 GitHub에 올라갔다면 **히스토리 삭제만으로는 부족** — AWS 자격증명을 먼저 교체.
+
+```text
+① RDS POSTGRES_PASSWORD  ② Redis AUTH  ③ JWT_SECRET  ④ RabbitMQ password
+→ config/secrets.env 갱신 → bash config/apply-settings.sh → Pod 재시작
+→ 마지막에 Git filter-repo / .example 실값 제거
+```
+
+---
+
+*문서 버전: 2026-06-24*

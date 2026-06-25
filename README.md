@@ -1,63 +1,43 @@
-# ForenShield AI — 인프라 · 배포 문서
+# ForenShield — 인프라 문서
 
-ForenShield AI 프로젝트의 **인프라 구축 · 앱 배포 · GPU 운영 · E2E 검증** 가이드 모음입니다.  
-번호 순서대로 진행하는 것을 권장합니다.
+## 문서 6개
 
----
-
-## 문서 목록
-
-| # | 문서 | 설명 |
-|---|------|------|
-| **1** | [GPU 자원 활용 가이드](./1.gpu_use_guide.md) | 단일 GPU 스케줄링, RabbitMQ 순차 처리, OOM 대응, Phase 1 원격 테스트 |
-| **2** | [AWS 인프라 구축 (Terraform)](./2.Terraform%20architecture.md) | VPC · RDS · EKS · VPN · ALB 등 14단계 구축 순서 |
-| **3** | [환경변수 · Secret 관리](./3.settings.md) | `.env.example`, K8s Secret/ConfigMap, IRSA |
-| **4** | [데이터 레이어 배포](./4.data-layer-deploy.md) | RDS PostgreSQL, RabbitMQ, S3 (evidence/models) |
-| **5** | [프론트엔드 배포](./5.frontend-deploy.md) | Next.js + Nginx 사이드카, ALB, Ingress |
-| **6** | [백엔드 배포](./6.backend-deploy.md) | Spring Boot, Redis, 큐 발행 |
-| **7** | [AI 분석 서버 배포](./7.ai-deploy.md) | EKS AI FastAPI + On-Prem GPU Gateway |
-| **8** | [E2E 통합 테스트](./8.test.md) | 프로덕션 URL 기준 전체 파이프라인 검증 |
-| **9** | [백엔드·프론트엔드 인프라 연결 (통합본)](./md/9.connect-backend-frontend.md) | 연결 따라하기(1~8장) + 트러블슈팅(9장) + 명령어(10장) + 체크리스트(11장) |
-| **10** | [트러블슈팅 (→ 9장 통합)](./md/10.troubleshooting-2026-06-10.md) | 9번 문서로 리다이렉트 |
-| **11** | [명령어 정리 (→ 9장 통합)](./md/11.commands-2026-06-10.md) | 9번 문서로 리다이렉트 |
-| **14** | [일일 비용 절감 — EKS · RDS 중지/재시작](./md/14.daily-cost-shutdown.md) | 퇴근 시 컴퓨팅 중지 · 출근 시 복구 (매일 루틴) |
-| **20** | [Hyperledger Fabric 적용 체크리스트](./md/20.hyperledger-fabric-apply.md) | INF·BE·FE 역할 · HTTP 계약 |
-| **21** | [Fabric Gateway EC2 요약](./md/21.fabric-gateway-quickstart.md) | EC2 아키텍처 · SG 요약 |
-| **22** | [Fabric EC2 콘솔·CLI 완전 따라하기](./md/22.fabric-ec2-full-runbook.md) | **EC2 생성부터 Fabric·EKS 연결까지** |
-
----
-
-## 권장 진행 순서
+| 문서 | 용도 | 언제 읽나 |
+|------|------|-----------|
+| **[handbook.md](./md/handbook.md)** | 운영 · 출퇴근 · 헬스체크 · 장애 | **매일** |
+| **[deployment.md](./md/deployment.md)** | BE·FE EKS 연결 · CI/CD | 배포·최초 연결 |
+| **[fabric.md](./md/fabric.md)** | Hyperledger Fabric · Gateway | 블록체인 |
+| **[settings.md](./md/settings.md)** | Secret · ConfigMap · RDS | 설정 변경 |
+| **[aws-infrastructure.md](./md/aws-infrastructure.md)** | VPC · EKS · RDS 구축 | 최초 구축 |
+| **[gpu.md](./md/gpu.md)** | On-Prem GPU · RabbitMQ 큐 | AI 분석 |
 
 ```text
-[1] GPU Phase 1 (On-Prem)     ← AWS 전 선행
-[2] Terraform / AWS 인프라
-[3] 환경변수 · Secret 정의
-[4] 데이터 레이어 (RDS · MQ · S3)
-[5] RabbitMQ → [7] AI FastAPI → [6] Backend → [5] Frontend
-[8] E2E 통합 테스트
+[처음] aws-infrastructure → settings → deployment → fabric
+[매일] handbook
+[배포] deployment (Git push → Argo CD)
 ```
 
-### Phase 요약
+## 코드 · 설정
 
-| Phase | 문서 | 완료 기준 |
-|-------|------|-----------|
-| Phase 1 | 1 | `nvidia-smi`, 원격 `/health` |
-| Phase 3 | 2, 3, 4 | VPC, RDS, S3, VPN |
-| Phase 4 | 5, 6, 7 | EKS Pod 전체 Running |
-| Sprint 4 | 8 | E2E 해피 패스 무오류 |
+| 경로 | 설명 |
+|------|------|
+| [config/](./config/) | K8s ConfigMap · Secret · `apply-settings.sh` |
+| [fabric/](./fabric/) | chaincode · gateway · EC2 스크립트 |
+
+## 현재 상태 (2026-06-24)
+
+| 영역 | 상태 |
+|------|------|
+| EKS · RDS · S3 · ALB | ✅ |
+| BE · FE · AI Argo CD | ✅ |
+| Fabric 해시 앵커 E2E | ✅ EVD-74 |
+| REPORT/MERKLE 앵커 | ⬜ |
+
+## 공통
+
+- Region: `ap-northeast-2` · Cluster: `forenshield` · Domain: `https://forensheildjangdochi.com`
+- Fabric EC2: `10.0.10.224` (IP 변경 시 `config/k8s/app-config.yaml` 갱신)
 
 ---
 
-## 공통 정보
-
-| 항목 | 값 |
-|------|-----|
-| Region | `ap-northeast-2` (서울) |
-| Namespace | `forenshield` |
-| EKS Cluster | `forenshield` |
-| GPU | On-Prem NVIDIA RTX 5080 |
-
----
-
-*마지막 업데이트: 2026-06-10*
+*마지막 업데이트: 2026-06-24*
