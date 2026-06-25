@@ -1,0 +1,16 @@
+[Unit]
+Description=ForenShield Hyperledger Fabric test-network
+After=docker.service network-online.target
+Wants=docker.service network-online.target
+Before=forenshield-fabric-gateway.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=ubuntu
+WorkingDirectory=/home/ubuntu/forenshield-infra/fabric
+ExecStart=/bin/bash /home/ubuntu/forenshield-infra/fabric/scripts/start-fabric-network.sh
+TimeoutStartSec=600
+
+[Install]
+WantedBy=multi-user.target

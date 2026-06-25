@@ -125,27 +125,64 @@ aws ec2 authorize-security-group-ingress \
 
 ---
 
-## 6. 매일 기동 (이미 구축된 경우)
+## 6. 매일 기동
 
-[handbook.md § 출근](./handbook.md#53-fabric-ec2) 참고.
+### 6.1 수동 (지금까지 방식)
 
 ```bash
 cd ~/forenshield-fabric-runtime/fabric-samples/test-network
-./network.sh up -ca
+./network.sh up createChannel -c forenshield-evidence -ca
 ./network.sh deployCC -ccn anchor \
   -ccp ~/forenshield-infra/fabric/chaincode/anchor \
   -ccl go -c forenshield-evidence
 cd ~/forenshield-infra/fabric && bash scripts/start-gateway.sh
 ```
 
-**Gateway systemd (선택):**
+> `up -ca`만 하면 **채널이 없어** deployCC 실패. 반드시 `createChannel` 포함.
+
+### 6.2 자동 기동 (systemd, 권장)
+
+**전제:** `setup-all.sh` 1회 완료, `gateway/.env` 존재, 경로 `~/forenshield-infra`
+
+EC2 SSM에서 **1회 설치:**
 
 ```bash
-sudo cp systemd/forenshield-fabric-gateway.service /etc/systemd/system/
-sudo systemctl enable --now forenshield-fabric-gateway
+cd ~/forenshield-infra/fabric
+git pull   # start-fabric-network.sh, install-systemd.sh 받기
+sudo bash scripts/install-systemd.sh
 ```
 
-Fabric `network.sh up`은 여전히 수동.
+**지금 바로 기동:**
+
+```bash
+sudo systemctl start forenshield-fabric-network
+sudo systemctl start forenshield-fabric-gateway
+curl -s http://localhost:8088/health
+```
+
+**부팅 시 자동:** `install-systemd.sh`가 `enable`까지 함 → EC2 start/reboot 후 2~5분 뒤 health 확인.
+
+| 서비스 | 역할 |
+|--------|------|
+| `forenshield-fabric-network` | Fabric up + createChannel + deployCC (실패 시 로그만) |
+| `forenshield-fabric-gateway` | `npm start` :8088 |
+
+**로그:**
+
+```bash
+journalctl -u forenshield-fabric-network -n 80 --no-pager
+journalctl -u forenshield-fabric-gateway -n 50 --no-pager
+tail -f ~/forenshield-infra/fabric/logs/fabric-network.log
+```
+
+**주의**
+
+- 퇴근 시 `network.sh down` **금지** (ledger 삭제) → **EC2 stop**만
+- `down` 후에는 부팅 시 deployCC까지 자동 시도하지만 **DB 옛 tx와 불일치** 가능
+- repo 경로가 `~/forenshield-infra`가 아니면 `systemd/*.service`의 경로 수정 후 재설치
+
+**수동 Gateway 띄운 상태면** systemd Gateway와 포트 충돌 → `pkill -f "node.*gateway"` 후 `systemctl start forenshield-fabric-gateway`
+
 
 ---
 

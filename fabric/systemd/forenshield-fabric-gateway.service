@@ -1,7 +1,8 @@
 [Unit]
 Description=ForenShield Fabric Anchor Gateway
-After=network.target docker.service
-Wants=docker.service
+After=forenshield-fabric-network.service docker.service network-online.target
+Wants=forenshield-fabric-network.service docker.service
+Requires=docker.service
 
 [Service]
 Type=simple
@@ -10,7 +11,8 @@ WorkingDirectory=/home/ubuntu/forenshield-infra/fabric/gateway
 EnvironmentFile=/home/ubuntu/forenshield-infra/fabric/gateway/.env
 ExecStart=/usr/bin/npm start
 Restart=on-failure
-RestartSec=10
+RestartSec=15
+TimeoutStartSec=120
 
 [Install]
 WantedBy=multi-user.target

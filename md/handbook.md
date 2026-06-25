@@ -121,7 +121,7 @@ kubectl get pods -n forenshield
 
 ```bash
 cd ~/forenshield-fabric-runtime/fabric-samples/test-network
-./network.sh up -ca
+./network.sh up createChannel -c forenshield-evidence -ca
 ./network.sh deployCC -ccn anchor -ccp ~/forenshield-infra/fabric/chaincode/anchor -ccl go -c forenshield-evidence
 cd ~/forenshield-infra/fabric && bash scripts/start-gateway.sh
 ```

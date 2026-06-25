@@ -11,13 +11,21 @@ bash scripts/start-gateway.sh
 bash scripts/print-be-config.sh
 ```
 
+## 부팅 시 자동 기동 (선택)
+
+```bash
+sudo bash scripts/install-systemd.sh
+```
+
+→ [`../md/fabric.md`](../md/fabric.md) § 6.2
+
 ## 디렉터리
 
 | 경로 | 설명 |
 |------|------|
 | `chaincode/anchor/` | 해시 앵커 chaincode (Go) |
 | `gateway/` | REST `POST /api/v1/anchor` |
-| `scripts/` | install · setup · start-gateway |
-| `systemd/` | Gateway 자동 시작 (선택) |
+| `scripts/` | install · setup · start-fabric-network · install-systemd |
+| `systemd/` | Fabric network + Gateway 자동 시작 |
 
 BE 계약: [`backend/.../blockchain.md`](../../backend/backend-forensic/docs/integrations/blockchain.md)
