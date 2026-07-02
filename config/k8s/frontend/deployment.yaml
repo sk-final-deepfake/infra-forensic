@@ -44,7 +44,7 @@ spec:
             limits: { cpu: 200m, memory: 128Mi }
         # ---- Next.js ----
         - name: nextjs
-          image: 877044078824.dkr.ecr.ap-northeast-2.amazonaws.com/forenshield-frontend:develop-4b2f92f25c5d40f8e03068c82dbbbe1272985088
+          image: 877044078824.dkr.ecr.ap-northeast-2.amazonaws.com/forenshield-frontend:develop-9bd7e7a2434302edee1fcc09b2d1009c93dedd1b
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
