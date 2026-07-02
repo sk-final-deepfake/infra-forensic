@@ -76,23 +76,19 @@ func (c *AnchorContract) GetAnchor(
 	ctx contractapi.TransactionContextInterface,
 	anchorType string,
 	lookupKey string,
-) (*AnchorRecord, error) {
+) (string, error) {
 	key, err := composeLookupKey(anchorType, lookupKey)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	bytes, err := ctx.GetStub().GetState(key)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	if bytes == nil {
-		return nil, fmt.Errorf("anchor not found: %s", key)
+		return "", fmt.Errorf("anchor not found: %s", key)
 	}
-	var record AnchorRecord
-	if err := json.Unmarshal(bytes, &record); err != nil {
-		return nil, err
-	}
-	return &record, nil
+	return string(bytes), nil
 }
 
 func composeKey(anchorType, subjectHash, evidenceId, reportId, merkleBatchDate string) (string, error) {
