@@ -25,9 +25,19 @@ fabric/.git/
 
 # --- Terraform 로컬 상태 (사용 시) ---
 terraform.tfvars
+secrets.tfvars
 *.tfstate
 *.tfstate.*
 .terraform/
+.terraform.tfstate.lock.info
+crash.log
+*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
 
 # --- 인증서 / 키 ---
 *.pem
@@ -35,3 +45,7 @@ terraform.tfvars
 # --- OS ---
 .DS_Store
 Thumbs.db
+
+terraform.tfvars
+secrets.tfvars
+terraform.tfvars.example
