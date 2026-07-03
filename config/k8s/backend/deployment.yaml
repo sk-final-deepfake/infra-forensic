@@ -42,6 +42,8 @@ spec:
                 name: s3-config
             - secretRef:
                 name: app-secrets          # JWT_SECRET_KEY
+            - secretRef:
+                name: manifest-signing-credentials   # MANIFEST_SIGNING_*_PEM
           # Spring Boot + Hibernate(ddl update) 기동에 40~60초 소요 → startupProbe로 대기
           startupProbe:
             httpGet:
