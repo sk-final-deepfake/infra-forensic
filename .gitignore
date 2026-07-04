@@ -1,6 +1,7 @@
 # --- Secrets & local env (절대 커밋 금지) ---
 config/secrets.env
 config/infra.env
+config/secrets/
 .env
 .env.local
 .env.production

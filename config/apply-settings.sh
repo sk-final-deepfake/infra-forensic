@@ -93,6 +93,20 @@ kubectl create secret generic app-secrets \
   --from-literal=JWT_SECRET_KEY="${JWT_SECRET_KEY}" \
   --dry-run=client -o yaml | kubectl apply -f -
 
+MANIFEST_KEY="${ROOT}/config/secrets/platform-signing-key.pem"
+MANIFEST_CERT="${ROOT}/config/secrets/platform-signing-cert.pem"
+if [[ -f "$MANIFEST_KEY" && -f "$MANIFEST_CERT" ]]; then
+  kubectl create secret generic manifest-signing-credentials \
+    --namespace forenshield \
+    --from-file=MANIFEST_SIGNING_PRIVATE_KEY_PEM="${MANIFEST_KEY}" \
+    --from-file=MANIFEST_SIGNING_CERTIFICATE_PEM="${MANIFEST_CERT}" \
+    --dry-run=client -o yaml | kubectl apply -f -
+  echo "    manifest-signing-credentials applied"
+else
+  echo "    WARN: ${MANIFEST_KEY} 또는 ${MANIFEST_CERT} 없음 — manifest-signing-credentials 스킵"
+  echo "          PEM을 config/secrets/ 에 두고 재실행하거나 kubectl로 직접 생성하세요."
+fi
+
 kubectl create secret generic s3-config \
   --namespace forenshield \
   --from-literal=AWS_ROLE_ARN="${APP_S3_ROLE_ARN:-arn:aws:iam::877044078824:role/forenshield-app-s3-role}" \
