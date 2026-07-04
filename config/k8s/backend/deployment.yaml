@@ -41,7 +41,8 @@ spec:
             - secretRef:
                 name: s3-config
             - secretRef:
-                name: app-secrets          # JWT_SECRET_KEY
+                name: app-secrets          # JWT_SECRET_KEY + MANIFEST_SIGNING_*_PEM (terraform secrets.tfvars)
+          # manifest-signing-credentials 별도 Secret 쓰지 말 것 — park 시 사라지고 CreateContainerConfigError
           # Spring Boot + Hibernate(ddl update) 기동에 40~60초 소요 → startupProbe로 대기
           startupProbe:
             httpGet:
