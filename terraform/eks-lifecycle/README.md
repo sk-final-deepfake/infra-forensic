@@ -10,7 +10,7 @@
 | 파일 | 설명 |
 |------|------|
 | `terraform.tfvars` | subnet ID, RDS/EC2 ID 등 (Git 제외) |
-| `secrets.tfvars` | DB/Redis/RabbitMQ/JWT 비밀 (Git 제외) |
+| `secrets.tfvars` | DB/Redis/RabbitMQ/JWT/**Manifest PEM** 비밀 (Git 제외) |
 | `wake_aws.tf` | RDS start/stop, Fabric EC2 start/stop |
 | `modules/bootstrap/wake_verify.tf` | Pod Ready 대기, HTTPS health |
 | `scripts/*.ps1` | AWS CLI / kubectl / curl 검증 |
@@ -103,7 +103,39 @@ powershell -ExecutionPolicy Bypass -File .\scripts\eks-wake.ps1
 | `kubectl` | Pod wait |
 | Fabric EC2 SSM Online | `forenshield-ec2-fabric-role` |
 | systemd (`install-systemd.sh` 1회) | EC2 reboot 후 Gateway 자동 기동 |
-| `secrets.tfvars` | Wake 시 필수 |
+| `secrets.tfvars` | Wake 시 필수 (JWT + **Manifest PEM** 포함) |
+
+### Manifest 서명 키 (park/wake)
+
+kubectl 로만 Secret 을 만들면 **park 시 EKS 삭제와 함께 사라집니다.**
+
+**권장:** `secrets.tfvars` 에 PEM 을 넣고, bootstrap 이 `app-secrets` 에
+`MANIFEST_SIGNING_PRIVATE_KEY_PEM` / `MANIFEST_SIGNING_CERTIFICATE_PEM` 을 넣습니다.
+backend `deployment` 는 이미 `app-secrets` 를 `envFrom` 하므로 **별도 `manifest-signing-credentials` Secret 불필요** 합니다.
+
+```hcl
+# secrets.tfvars (Git 금지)
+manifest_signing_private_key_pem = <<-EOT
+-----BEGIN PRIVATE KEY-----
+...
+-----END PRIVATE KEY-----
+EOT
+manifest_signing_certificate_pem = <<-EOT
+-----BEGIN CERTIFICATE-----
+...
+-----END CERTIFICATE-----
+EOT
+```
+
+live deployment 에 `manifest-signing-credentials` 가 **필수** 로 붙어 있으면 제거하세요
+(Secret 없어도 CreateContainerConfigError). `app-secrets` 만 쓰면 됩니다.
+
+```powershell
+# 잘못된 secretRef 제거 (index 는 describe 로 확인)
+kubectl get deploy backend -n forenshield -o jsonpath="{.spec.template.spec.containers[0].envFrom}" 
+```
+
+대안: AWS Secrets Manager + `MANIFEST_SIGNING_SECRET_ID` (IRSA 권한 필요). PEM 을 AWS 에만 둘 때.
 
 ---
 

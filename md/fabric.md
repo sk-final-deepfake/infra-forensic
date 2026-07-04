@@ -183,6 +183,9 @@ tail -f ~/forenshield-infra/fabric/logs/fabric-network.log
 
 **수동 Gateway 띄운 상태면** systemd Gateway와 포트 충돌 → `pkill -f "node.*gateway"` 후 `systemctl start forenshield-fabric-gateway`
 
+**`network.sh down` / ledger 재생성 후 앵커 FAILED + `ENOENT ... keystore/..._sk`:**  
+Gateway `.env`의 개인키 경로가 옛날 것 → `bash scripts/write-gateway-env.sh` 후 Gateway 재시작.
+
 
 ---
 

@@ -23,6 +23,8 @@ module "bootstrap" {
   redis_password    = var.redis_password
   rabbitmq_password = var.rabbitmq_password
   jwt_secret_key    = var.jwt_secret_key
+  manifest_signing_private_key_pem = var.manifest_signing_private_key_pem
+  manifest_signing_certificate_pem = var.manifest_signing_certificate_pem
   argocd_admin_password = var.argocd_admin_password
 
   fabric_security_group_id = var.fabric_security_group_id

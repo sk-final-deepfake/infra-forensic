@@ -9,7 +9,7 @@ SAMPLES="$WORK/fabric-samples"
 CHANNEL="${FABRIC_CHANNEL:-forenshield-evidence}"
 CC_NAME="${FABRIC_CHAINCODE:-anchor}"
 CC_SRC="$ROOT/chaincode/anchor"
-FABRIC_VERSION="${FABRIC_VERSION:-2.5.12}"
+FABRIC_VERSION="${FABRIC_VERSION:-2.5.15}"
 
 echo "==> ForenShield Fabric PoC"
 echo "    repo fabric dir: $ROOT"
@@ -44,6 +44,13 @@ cd "$SAMPLES/test-network"
 echo "==> Fabric network up + channel $CHANNEL"
 ./network.sh down || true
 ./network.sh up createChannel -c "$CHANNEL" -ca
+
+echo "==> chaincode go mod tidy"
+if command -v go >/dev/null 2>&1; then
+  (cd "$CC_SRC" && go mod tidy)
+else
+  echo "WARN: go 없음 — chaincode/anchor/go.sum 이 repo 에 포함돼 있어야 합니다."
+fi
 
 echo "==> Deploy chaincode $CC_NAME"
 ./network.sh deployCC -ccn "$CC_NAME" -ccp "$CC_SRC" -ccl go -c "$CHANNEL"
@@ -80,7 +87,7 @@ cat <<EOF
  EKS BE 설정 (EC2 private IP):
    bash $ROOT/scripts/print-be-config.sh
 
- 가이드: Infra/md/21.fabric-gateway-quickstart.md
+ 가이드: Infra/md/fabric.md
 
  네트워크 중지:
    cd $SAMPLES/test-network && ./network.sh down

@@ -87,6 +87,11 @@ EC2 (SSM): `curl -s http://localhost:8088/health` · `docker ps | grep peer`
 
 ## 5. 출근 (Startup)
 
+> **Terraform Wake (권장):** `Infra/terraform/eks-lifecycle/scripts/eks-wake.ps1` 한 번으로  
+> RDS start → Fabric EC2+Gateway → EKS → Helm/Argo → Pod Ready → HTTPS health 까지 자동.
+
+수동 절차는 아래 참고용.
+
 > **순서:** RDS → EKS 노드 → RabbitMQ Ready → backend → Fabric EC2
 
 ### 5.1 RDS
@@ -134,18 +139,43 @@ cd ~/forenshield-infra/fabric && bash scripts/start-gateway.sh
 
 > **순서:** EKS 노드 0 → RDS stop → Fabric Gateway 종료 → EC2 stop
 
-### 6.1 EKS
+### 공통 설정
+```Git Bash
+export PATH="$PATH:/c/Program Files/Amazon/AWSCLIV2"
+export AWS_PROFILE=forenshield
+export AWS_REGION=ap-northeast-2
+export CLUSTER_NAME=forenshield
+aws sts get-caller-identity
+```
 
-```powershell
-foreach ($ng in @("frontend-ng", "backend-ng", "ai-fastapi-ng")) {
-  aws eks update-nodegroup-config --cluster-name forenshield --nodegroup-name $ng `
+### 6.1 EKS (비용 절감 옵션)
+
+**A. 가벼운 퇴근 (기존)** — Worker EC2만 절약, **Control Plane은 계속 과금 (~$0.10/시간)**
+
+```Git Bash
+for ng in frontend-ng backend-ng ai-fastapi-ng; do
+  echo "Scaling $ng to 0..."
+  aws eks update-nodegroup-config \
+    --cluster-name "$CLUSTER_NAME" \
+    --nodegroup-name "$ng" \
     --scaling-config minSize=0,desiredSize=0,maxSize=4
-}
+done
+
 aws rds stop-db-instance --db-instance-identifier forenshield-db
 ```
 
-**유지:** VPC · EKS 클러스터 · S3 · ECR · Argo CD 매니페스트  
-**끄지 않음:** EKS control plane · NAT · ElastiCache (Stop API 없음)
+**B. EKS 완전 중지 (권장 — Control Plane 비용까지 절감)** — Terraform
+
+```powershell
+cd Infra/terraform/eks-lifecycle
+.\scripts\eks-park.ps1    # EKS 삭제 + RDS/EC2 stop 자동
+```
+
+출근 시 `.\scripts\eks-wake.ps1` — RDS/EC2/Gateway/Pod/health 포함 **전체 자동**.  
+상세: [terraform/eks-lifecycle/README.md](../terraform/eks-lifecycle/README.md)
+
+**유지:** VPC · S3 · ECR · Argo 매니페스트(Git) · VPN  
+**끄지 않음 (A만 할 때):** EKS control plane · NAT · ElastiCache
 
 ### 6.2 Fabric EC2
 

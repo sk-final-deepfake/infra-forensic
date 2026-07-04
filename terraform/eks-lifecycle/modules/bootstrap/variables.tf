@@ -47,6 +47,18 @@ variable "jwt_secret_key" {
   sensitive = true
 }
 
+variable "manifest_signing_private_key_pem" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
+variable "manifest_signing_certificate_pem" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
 variable "argocd_admin_password" {
   type      = string
   sensitive = true

@@ -13,6 +13,33 @@ function requiredEnv(name) {
   return value;
 }
 
+function asString(value) {
+  if (value == null) {
+    return "";
+  }
+  return String(value);
+}
+
+function certVerifiedArg(value) {
+  if (value === true || value === "true") {
+    return "true";
+  }
+  if (value === false || value === "false") {
+    return "false";
+  }
+  return "";
+}
+
+function offchainRefArg(value) {
+  if (value == null) {
+    return "";
+  }
+  if (typeof value === "string") {
+    return value.trim();
+  }
+  return JSON.stringify(value);
+}
+
 async function getGateway() {
   if (!gatewayPromise) {
     gatewayPromise = createGateway();
@@ -72,6 +99,11 @@ async function submitAnchor(payload) {
       reportId,
       merkleBatchDate,
       merkleLeafCount,
+      asString(payload.signature),
+      asString(payload.signerCertHash),
+      certVerifiedArg(payload.certVerified),
+      asString(payload.offchainLogHash),
+      offchainRefArg(payload.offchainRef),
     ],
   });
 

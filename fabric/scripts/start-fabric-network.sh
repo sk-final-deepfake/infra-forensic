@@ -56,4 +56,10 @@ else
   echo "WARN: chaincode path missing: $CC_SRC"
 fi
 
+INFRA_FABRIC="${INFRA_FABRIC:-$HOME/forenshield-infra/fabric}"
+if [[ -x "$INFRA_FABRIC/scripts/write-gateway-env.sh" ]]; then
+  echo "Regenerating gateway/.env (crypto paths after network up)..."
+  bash "$INFRA_FABRIC/scripts/write-gateway-env.sh" "$SAMPLES"
+fi
+
 echo "=== $(date -Is) done ==="

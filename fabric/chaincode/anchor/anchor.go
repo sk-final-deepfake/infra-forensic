@@ -9,22 +9,39 @@ import (
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 )
 
+// OffchainRef points to off-chain detail locations (no payload content).
+type OffchainRef struct {
+	ManifestStoragePath string `json:"manifestStoragePath,omitempty"`
+	OriginalStoragePath string `json:"originalStoragePath,omitempty"`
+	ReportStoragePath   string `json:"reportStoragePath,omitempty"`
+	CustodyLogBundleRef string `json:"custodyLogBundleRef,omitempty"`
+}
+
+// AnchorRecord is the immutable ledger value for a hash anchor.
 type AnchorRecord struct {
-	SubjectHash     string `json:"subjectHash"`
-	AnchorType      string `json:"anchorType"`
-	ClientID        string `json:"clientId"`
-	EvidenceID      string `json:"evidenceId,omitempty"`
-	ReportID        string `json:"reportId,omitempty"`
-	MerkleBatchDate string `json:"merkleBatchDate,omitempty"`
-	MerkleLeafCount string `json:"merkleLeafCount,omitempty"`
-	AnchoredAt      string `json:"anchoredAt"`
-	TxID            string `json:"txId,omitempty"`
+	SubjectHash     string      `json:"subjectHash"`
+	AnchorType      string      `json:"anchorType"`
+	ClientID        string      `json:"clientId"`
+	EvidenceID      string      `json:"evidenceId,omitempty"`
+	ReportID        string      `json:"reportId,omitempty"`
+	MerkleBatchDate string      `json:"merkleBatchDate,omitempty"`
+	MerkleLeafCount string      `json:"merkleLeafCount,omitempty"`
+	Signature       string      `json:"signature,omitempty"`
+	SignerCertHash  string      `json:"signerCertHash,omitempty"`
+	CertVerified    *bool       `json:"certVerified,omitempty"`
+	OffchainLogHash string      `json:"offchainLogHash,omitempty"`
+	OffchainRef     *OffchainRef `json:"offchainRef,omitempty"`
+	AnchoredAt      string      `json:"anchoredAt"`
+	TxID            string      `json:"txId,omitempty"`
 }
 
 type AnchorContract struct {
 	contractapi.Contract
 }
 
+// AnchorHash stores an immutable anchor record.
+// Extended fields (signature, signerCertHash, certVerified, offchainLogHash, offchainRefJson)
+// are optional strings; empty means omit from the ledger record.
 func (c *AnchorContract) AnchorHash(
 	ctx contractapi.TransactionContextInterface,
 	subjectHash string,
@@ -34,6 +51,11 @@ func (c *AnchorContract) AnchorHash(
 	reportId string,
 	merkleBatchDate string,
 	merkleLeafCount string,
+	signature string,
+	signerCertHash string,
+	certVerified string,
+	offchainLogHash string,
+	offchainRefJson string,
 ) error {
 	subjectHash = strings.TrimSpace(subjectHash)
 	anchorType = strings.TrimSpace(anchorType)
@@ -58,10 +80,15 @@ func (c *AnchorContract) AnchorHash(
 		SubjectHash:     subjectHash,
 		AnchorType:      anchorType,
 		ClientID:        clientId,
-		EvidenceID:      evidenceId,
-		ReportID:        reportId,
-		MerkleBatchDate: merkleBatchDate,
-		MerkleLeafCount: merkleLeafCount,
+		EvidenceID:      strings.TrimSpace(evidenceId),
+		ReportID:        strings.TrimSpace(reportId),
+		MerkleBatchDate: strings.TrimSpace(merkleBatchDate),
+		MerkleLeafCount: strings.TrimSpace(merkleLeafCount),
+		Signature:       strings.TrimSpace(signature),
+		SignerCertHash:  strings.TrimSpace(signerCertHash),
+		CertVerified:    parseOptionalBool(certVerified),
+		OffchainLogHash: strings.TrimSpace(offchainLogHash),
+		OffchainRef:     parseOffchainRef(offchainRefJson),
 		AnchoredAt:      time.Now().UTC().Format(time.RFC3339),
 		TxID:            ctx.GetStub().GetTxID(),
 	}
@@ -89,6 +116,35 @@ func (c *AnchorContract) GetAnchor(
 		return "", fmt.Errorf("anchor not found: %s", key)
 	}
 	return string(bytes), nil
+}
+
+func parseOptionalBool(value string) *bool {
+	switch strings.TrimSpace(strings.ToLower(value)) {
+	case "true", "1":
+		v := true
+		return &v
+	case "false", "0":
+		v := false
+		return &v
+	default:
+		return nil
+	}
+}
+
+func parseOffchainRef(raw string) *OffchainRef {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil
+	}
+	var ref OffchainRef
+	if err := json.Unmarshal([]byte(raw), &ref); err != nil {
+		return nil
+	}
+	if ref.ManifestStoragePath == "" && ref.OriginalStoragePath == "" &&
+		ref.ReportStoragePath == "" && ref.CustodyLogBundleRef == "" {
+		return nil
+	}
+	return &ref
 }
 
 func composeKey(anchorType, subjectHash, evidenceId, reportId, merkleBatchDate string) (string, error) {

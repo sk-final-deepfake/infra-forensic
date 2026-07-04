@@ -91,6 +91,21 @@ variable "jwt_secret_key" {
   default   = ""
 }
 
+# Manifest X.509 signing (PKCS#8 + cert PEM). Wake 시 app-secrets 로 재생성 — park 후에도 secrets.tfvars 에 남음.
+variable "manifest_signing_private_key_pem" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "MANIFEST_SIGNING_PRIVATE_KEY_PEM — platform PKCS#8 private key PEM"
+}
+
+variable "manifest_signing_certificate_pem" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "MANIFEST_SIGNING_CERTIFICATE_PEM — platform X.509 certificate PEM"
+}
+
 variable "argocd_admin_password" {
   type        = string
   sensitive   = true
