@@ -90,8 +90,34 @@ powershell -ExecutionPolicy Bypass -File .\scripts\eks-wake.ps1
 | `https://forensheildjangdochi.com/health` | ✅ | `scripts/verify-app-health.ps1` |
 | IRSA trust policy | ✅ | `patch-ebs-csi-trust.ps1` / `patch-irsa-trust.ps1` / `patch-alb-controller-trust.ps1` |
 | Public subnet ELB tags | ✅ | `patch-subnet-tags.ps1` (Route53 15분 타임아웃 방지) |
+| RabbitMQ NodePort 31624 + GPU `.env` / worker | ✅ | `sync-gpu-rabbitmq.ps1` (`GPU_SSH_*` 설정 시) |
 
 `wake_run_id` 를 매 Wake마다 새로 넣어 provisioner가 재실행됩니다.
+
+### GPU RabbitMQ 자동 동기화
+
+수동으로 하던 NodePort apply · 노드 IP 조회 · `gpu_worker/.env` 수정 · worker 재시작을 wake 끝에 실행합니다.
+
+**한 번만:** PC → GPU SSH **키** 등록 (비번 대화형은 자동화하지 않음).
+
+```powershell
+$env:GPU_SSH_HOST = "58.127.241.84"   # VPN에서 닿는 GPU
+$env:GPU_SSH_USER = "sk4team"
+$env:GPU_SSH_KEY_PATH = "$env:USERPROFILE\.ssh\id_ed25519"
+# $env:SKIP_GPU_SYNC = "1"            # GPU 단계만 스킵
+
+.\eks-wake.cmd
+```
+
+GPU 없이 NodePort만:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\sync-gpu-rabbitmq.ps1
+```
+
+`.env` 에는 `RABBITMQ_HOST=<node-ip>` / `RABBITMQ_PORT=31624` 로 기록합니다 (`gpu_worker/config.py` 분리 필드).
+
+Manifest: `config/k8s/rabbitmq/rabbitmq-external.yaml` (Argo recurse 시 자동 적용).
 
 ---
 

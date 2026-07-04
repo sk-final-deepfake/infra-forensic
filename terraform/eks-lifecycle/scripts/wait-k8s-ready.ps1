@@ -25,6 +25,14 @@ kubectl wait --for=condition=ready pod `
     -n $Namespace `
     --timeout=$timeout
 
+# On-Prem GPU NodePort (Argo may also apply this; ensure present before health continues)
+$InfraRoot = Split-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) -Parent
+$RabbitExternal = Join-Path $InfraRoot "config\k8s\rabbitmq\rabbitmq-external.yaml"
+if (Test-Path $RabbitExternal) {
+    Write-Host "Applying rabbitmq-external NodePort..."
+    kubectl apply -f $RabbitExternal
+}
+
 foreach ($deploy in @("backend", "frontend", "ai-fastapi")) {
     Write-Host "Waiting for deployment/$deploy..."
     kubectl wait --for=condition=available `

@@ -58,4 +58,12 @@ Write-Host "=== Terraform 출력 ===" -ForegroundColor Cyan
 terraform output
 
 Write-Host ""
+Write-Host "=== RabbitMQ NodePort + GPU worker sync ===" -ForegroundColor Cyan
+& "$PSScriptRoot\sync-gpu-rabbitmq.ps1"
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "WARN: GPU RabbitMQ sync failed (exit $LASTEXITCODE). NodePort may still be up — fix GPU_SSH_* or run sync-gpu-rabbitmq.ps1 manually." -ForegroundColor Yellow
+}
+
+Write-Host ""
 Write-Host "Wake 완료." -ForegroundColor Green
+
