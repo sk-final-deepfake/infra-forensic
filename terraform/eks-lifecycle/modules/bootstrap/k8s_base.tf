@@ -29,7 +29,12 @@ resource "kubernetes_config_map_v1" "app_config" {
     AWS_REGION                   = var.aws_region
     RABBITMQ_HOST                = "rabbitmq.forenshield.svc.cluster.local"
     RABBITMQ_PORT                = "5672"
-    AI_GATEWAY_URL               = "http://192.168.0.66:8000"
+    AI_GATEWAY_URL               = "http://192.168.0.112:8000"
+    AI_GATEWAY_TIMEOUT_SEC       = "1800"
+    AI_CONSUMER_ENABLED          = "true"
+    ANALYSIS_QUEUE               = "forenshield.analysis.queue"
+    AI_RESULT_EXCHANGE           = "ai.result.exchange"
+    AI_RESULT_ROUTING_KEY        = "result.video"
     SPRING_PROFILES_ACTIVE       = "prod"
     SPRING_JPA_HIBERNATE_DDL_AUTO = "update"
     SERVER_PORT                  = "8080"
