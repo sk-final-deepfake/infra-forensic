@@ -10,7 +10,7 @@
 | 파일 | 설명 |
 |------|------|
 | `terraform.tfvars` | subnet ID, RDS/EC2 ID 등 (Git 제외) |
-| `secrets.tfvars` | DB/Redis/RabbitMQ/JWT/**Manifest PEM** 비밀 (Git 제외) |
+| `secrets.tfvars` | DB/Redis/RabbitMQ/JWT/**HLS 마스터 시크릿**/**Manifest PEM** 비밀 (Git 제외) |
 | `wake_aws.tf` | RDS start/stop, Fabric EC2 start/stop |
 | `modules/bootstrap/wake_verify.tf` | Pod Ready 대기, HTTPS health |
 | `scripts/*.ps1` | AWS CLI / kubectl / curl 검증 |
@@ -129,7 +129,7 @@ Manifest: `config/k8s/rabbitmq/rabbitmq-external.yaml` (Argo recurse 시 자동 
 | `kubectl` | Pod wait |
 | Fabric EC2 SSM Online | `forenshield-ec2-fabric-role` |
 | systemd (`install-systemd.sh` 1회) | EC2 reboot 후 Gateway 자동 기동 |
-| `secrets.tfvars` | Wake 시 필수 (JWT + **Manifest PEM** 포함) |
+| `secrets.tfvars` | Wake 시 필수 (JWT + **HLS 마스터 시크릿** + **Manifest PEM** 포함) |
 
 ### Manifest 서명 키 (park/wake)
 

@@ -91,6 +91,13 @@ variable "jwt_secret_key" {
   default   = ""
 }
 
+variable "hls_content_key_encryption_secret" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "HLS content_key_enc 암호화용 마스터 시크릿 (16자 이상) → app-secrets HLS_CONTENT_KEY_ENCRYPTION_SECRET"
+}
+
 # Manifest X.509 signing (PKCS#8 + cert PEM). Wake 시 app-secrets 로 재생성 — park 후에도 secrets.tfvars 에 남음.
 variable "manifest_signing_private_key_pem" {
   type        = string

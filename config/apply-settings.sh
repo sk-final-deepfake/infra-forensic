@@ -91,6 +91,7 @@ kubectl create secret generic rabbitmq-credentials \
 kubectl create secret generic app-secrets \
   --namespace forenshield \
   --from-literal=JWT_SECRET_KEY="${JWT_SECRET_KEY}" \
+  ${HLS_CONTENT_KEY_ENCRYPTION_SECRET:+--from-literal=HLS_CONTENT_KEY_ENCRYPTION_SECRET="${HLS_CONTENT_KEY_ENCRYPTION_SECRET}"} \
   --dry-run=client -o yaml | kubectl apply -f -
 
 MANIFEST_KEY="${ROOT}/config/secrets/platform-signing-key.pem"

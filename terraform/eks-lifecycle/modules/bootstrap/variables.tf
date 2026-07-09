@@ -47,6 +47,12 @@ variable "jwt_secret_key" {
   sensitive = true
 }
 
+variable "hls_content_key_encryption_secret" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
 variable "manifest_signing_private_key_pem" {
   type      = string
   sensitive = true

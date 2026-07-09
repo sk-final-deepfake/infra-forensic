@@ -103,11 +103,14 @@ resource "kubernetes_secret_v1" "app_secrets" {
     name      = "app-secrets"
     namespace = kubernetes_namespace_v1.forenshield.metadata[0].name
   }
-  # JWT + Manifest 서명 PEM — deployment envFrom: app-secrets 만으로 주입 (별도 manifest-signing-credentials 불필요)
+  # JWT + HLS 마스터 시크릿 + Manifest 서명 PEM — deployment envFrom: app-secrets
   data = merge(
     {
       JWT_SECRET_KEY = var.jwt_secret_key
     },
+    var.hls_content_key_encryption_secret != "" ? {
+      HLS_CONTENT_KEY_ENCRYPTION_SECRET = var.hls_content_key_encryption_secret
+    } : {},
     var.manifest_signing_private_key_pem != "" && var.manifest_signing_certificate_pem != "" ? {
       MANIFEST_SIGNING_PRIVATE_KEY_PEM  = var.manifest_signing_private_key_pem
       MANIFEST_SIGNING_CERTIFICATE_PEM  = var.manifest_signing_certificate_pem
