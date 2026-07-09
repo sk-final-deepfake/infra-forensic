@@ -29,7 +29,7 @@ resource "kubernetes_config_map_v1" "app_config" {
     AWS_REGION                   = var.aws_region
     RABBITMQ_HOST                = "rabbitmq.forenshield.svc.cluster.local"
     RABBITMQ_PORT                = "5672"
-    AI_GATEWAY_URL               = "http://192.168.0.112:8000"
+    AI_GATEWAY_URL               = "http://192.168.0.34:8000"
     AI_GATEWAY_TIMEOUT_SEC       = "1800"
     AI_CONSUMER_ENABLED          = "true"
     ANALYSIS_QUEUE               = "forenshield.analysis.queue"

@@ -1,13 +1,16 @@
-# Wake 후: RabbitMQ NodePort 보장 + GPU worker .env(RABBITMQ_HOST/PORT) 갱신 + worker 재시작
-# 사전: VPN, kubectl, (GPU 동기화 시) SSH 키
+# Wake 후 (Method B): EKS ai-fastapi consumer + VPN→GPU Gateway health + GPU worker 중지
+# 경로: Backend → RabbitMQ(EKS) → ai-fastapi Pod → VPN → GPU Gateway :8000/infer
 #
-# 환경변수 (GPU 동기화할 때만 설정):
-#   GPU_SSH_HOST       예: 58.127.241.84 또는 welabs (VPN에서 도달 가능)
-#   GPU_SSH_USER       기본 sk4team
-#   GPU_SSH_KEY_PATH   기본 %USERPROFILE%\.ssh\id_ed25519 또는 id_rsa
-#   GPU_REMOTE_ROOT    홈 기준 상대경로, 기본 forenShield-ai
-#   RABBITMQ_NODEPORT  기본 31624
-#   SKIP_GPU_SYNC=1    GPU 단계 건너뛰기
+# 환경변수:
+#   AI_GATEWAY_URL         기본: app-config ConfigMap 또는 http://192.168.0.34:8000
+#   ANALYSIS_QUEUE         기본: forenshield.analysis.queue
+#   GPU_SSH_HOST           예: 58.151.205.220 (GPU SSH — worker 중지·Gateway 로컬 확인)
+#   GPU_SSH_USER           기본 sk4team
+#   GPU_SSH_KEY_PATH       기본 %USERPROFILE%\.ssh\id_ed25519 또는 id_rsa
+#   GPU_REMOTE_ROOT        기본 forenShield-ai
+#   GPU_GATEWAY_LOCAL_URL  GPU SSH 내부 health URL, 기본 http://127.0.0.1:8000
+#   SKIP_GPU_SYNC=1        GPU SSH 단계 건너뛰기
+#   ENABLE_RABBITMQ_NODEPORT=1  (레거시 PoC) GPU→RabbitMQ NodePort apply — Method B에선 불필요
 
 param(
     [string]$ClusterName = "forenshield",
@@ -18,7 +21,6 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-# kubectl writes deprecation warnings to stderr; PowerShell Stop treats them as terminating errors.
 function Invoke-KubectlText {
     param([Parameter(Mandatory = $true)][string[]]$Arguments)
     $prev = $ErrorActionPreference
@@ -38,6 +40,136 @@ function Invoke-KubectlText {
     return $text.Trim()
 }
 
+function Get-AiGatewayUrl {
+    if ($env:AI_GATEWAY_URL) {
+        return $env:AI_GATEWAY_URL.Trim().TrimEnd("/")
+    }
+    try {
+        $fromCm = Invoke-KubectlText -Arguments @(
+            "get", "configmap", "app-config", "-n", $Namespace,
+            "-o", "jsonpath={.data.AI_GATEWAY_URL}"
+        )
+        if ($fromCm) {
+            return $fromCm.Trim().TrimEnd("/")
+        }
+    } catch {
+        Write-Host "WARN: could not read AI_GATEWAY_URL from app-config: $_" -ForegroundColor Yellow
+    }
+    return "http://192.168.0.34:8000"
+}
+
+function Test-AnalysisQueueConsumer {
+    param(
+        [string]$QueueName,
+        [int]$ExpectedConsumers = 1
+    )
+
+    $raw = Invoke-KubectlText -Arguments @(
+        "exec", "-n", $Namespace, "rabbitmq-0", "--",
+        "rabbitmqctl", "list_queues", "name", "messages", "consumers"
+    )
+
+    $line = $raw -split "`n" | Where-Object { $_ -match "^\s*$([regex]::Escape($QueueName))\s" } | Select-Object -First 1
+    if (-not $line) {
+        throw "Queue '$QueueName' not found in rabbitmqctl output."
+    }
+
+    $parts = ($line -replace '\s+', ' ').Trim() -split ' '
+    if ($parts.Count -lt 3) {
+        throw "Unexpected queue line: $line"
+    }
+
+    $messages = [int]$parts[1]
+    $consumers = [int]$parts[2]
+    Write-Host "Queue $QueueName messages=$messages consumers=$consumers" -ForegroundColor Green
+
+    if ($consumers -eq 0) {
+        throw "No consumer on $QueueName — ai-fastapi consumer가 떠 있는지 확인하세요."
+    }
+    if ($consumers -gt $ExpectedConsumers) {
+        throw "consumers=$consumers on $QueueName — GPU gpu_worker가 같이 떠 있으면 중지하세요 (Method B는 ai-fastapi만 consume)."
+    }
+    if ($consumers -lt $ExpectedConsumers) {
+        Write-Host "WARN: consumers=$consumers (expected $ExpectedConsumers)." -ForegroundColor Yellow
+    }
+}
+
+function Test-EksToGpuGateway {
+    param([string]$GatewayUrl)
+
+    $healthUrl = "$GatewayUrl/health"
+    $inferUrl = "$GatewayUrl/infer"
+    Write-Host "EKS ai-fastapi → GPU Gateway: $healthUrl (+ POST $inferUrl route check)"
+
+    $py = @"
+import os, sys, urllib.request
+url = os.environ['GW_HEALTH']
+try:
+    with urllib.request.urlopen(url, timeout=20) as r:
+        body = r.read(200).decode('utf-8', 'replace')
+        print(f'HTTP {r.status} {body[:120]}')
+except Exception as e:
+    print(f'FAIL: {e}', file=sys.stderr)
+    sys.exit(1)
+"@
+
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    $raw = & kubectl exec -n $Namespace "deploy/ai-fastapi" -- env "GW_HEALTH=$healthUrl" python -c $py 2>&1
+    $code = $LASTEXITCODE
+    $ErrorActionPreference = $prev
+
+    $text = @(
+        $raw | ForEach-Object {
+            if ($_ -is [System.Management.Automation.ErrorRecord]) { $_.Exception.Message }
+            else { "$_" }
+        }
+    ) -join "`n"
+
+    if ($code -ne 0) {
+        throw "EKS→GPU Gateway health failed: $text"
+    }
+    Write-Host $text -ForegroundColor Green
+
+    $pyInfer = @"
+import os, sys, urllib.request, json
+base = os.environ['GW_BASE']
+req = urllib.request.Request(
+    base.rstrip('/') + '/infer',
+    data=json.dumps({'case_id':'wake-probe','evidence_id':0,'analysis_request_id':0,'evidence_path':'s3://probe/probe.mp4'}).encode(),
+    headers={'Content-Type': 'application/json'},
+    method='POST',
+)
+try:
+    urllib.request.urlopen(req, timeout=20)
+except urllib.error.HTTPError as e:
+    if e.code in (404, 405):
+        print(f'FAIL: POST /infer returned {e.code} — GPU에 Mock 서버만 떠 있을 수 있습니다.', file=sys.stderr)
+        sys.exit(1)
+    if e.code in (422, 500, 503):
+        print(f'POST /infer route OK (HTTP {e.code}, inference deps or S3 expected)')
+        sys.exit(0)
+    print(f'FAIL: POST /infer HTTP {e.code}', file=sys.stderr)
+    sys.exit(1)
+"@
+
+    $prev2 = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    $inferRaw = & kubectl exec -n $Namespace "deploy/ai-fastapi" -- env "GW_BASE=$GatewayUrl" python -c $pyInfer 2>&1
+    $inferCode = $LASTEXITCODE
+    $ErrorActionPreference = $prev2
+    $inferText = @(
+        $inferRaw | ForEach-Object {
+            if ($_ -is [System.Management.Automation.ErrorRecord]) { $_.Exception.Message }
+            else { "$_" }
+        }
+    ) -join "`n"
+    if ($inferCode -ne 0) {
+        throw "EKS→GPU Gateway /infer check failed: $inferText"
+    }
+    Write-Host $inferText -ForegroundColor Green
+}
+
 if ($env:RABBITMQ_NODEPORT) {
     $NodePort = [int]$env:RABBITMQ_NODEPORT
 }
@@ -47,92 +179,67 @@ $EksLifecycleRoot = Split-Path $ScriptDir -Parent
 $TerraformRoot = Split-Path $EksLifecycleRoot -Parent
 $InfraRoot = Split-Path $TerraformRoot -Parent
 $ServiceManifest = Join-Path $InfraRoot "config\k8s\rabbitmq\rabbitmq-external.yaml"
+$analysisQueue = if ($env:ANALYSIS_QUEUE) { $env:ANALYSIS_QUEUE } else { "forenshield.analysis.queue" }
+$gatewayUrl = Get-AiGatewayUrl
 
-Write-Host "=== Sync GPU RabbitMQ (NodePort + worker) ===" -ForegroundColor Cyan
+Write-Host "=== Method B sync (ai-fastapi + GPU Gateway) ===" -ForegroundColor Cyan
+Write-Host "AI_GATEWAY_URL=$gatewayUrl"
+Write-Host "ANALYSIS_QUEUE=$analysisQueue"
 
 aws eks update-kubeconfig --name $ClusterName --region $Region | Out-Null
 
 Write-Host "Waiting for rabbitmq-0..."
 Invoke-KubectlText -Arguments @("wait", "--for=condition=ready", "pod/rabbitmq-0", "-n", $Namespace, "--timeout=300s") | Out-Null
 
-if (-not (Test-Path $ServiceManifest)) {
-    throw "Manifest not found: $ServiceManifest"
-}
+Write-Host "Waiting for ai-fastapi..."
+Invoke-KubectlText -Arguments @("wait", "--for=condition=ready", "pod", "-l", "app=ai-fastapi", "-n", $Namespace, "--timeout=300s") | Out-Null
 
-Write-Host "Applying rabbitmq-external NodePort..."
-Invoke-KubectlText -Arguments @("apply", "-f", $ServiceManifest) | Write-Host
+Test-AnalysisQueueConsumer -QueueName $analysisQueue -ExpectedConsumers 1
+Test-EksToGpuGateway -GatewayUrl $gatewayUrl
 
-$deadline = (Get-Date).AddMinutes(3)
-$podIp = ""
-while ((Get-Date) -lt $deadline) {
-    $podIp = Invoke-KubectlText -Arguments @(
+if ($env:ENABLE_RABBITMQ_NODEPORT -eq "1") {
+    Write-Host "ENABLE_RABBITMQ_NODEPORT=1 — applying legacy NodePort (PoC GPU worker용)..." -ForegroundColor Yellow
+    if (-not (Test-Path $ServiceManifest)) {
+        throw "Manifest not found: $ServiceManifest"
+    }
+    Invoke-KubectlText -Arguments @("apply", "-f", $ServiceManifest) | Write-Host
+
+    $nodeName = Invoke-KubectlText -Arguments @(
         "get", "pod", "rabbitmq-0", "-n", $Namespace,
-        "-o", "jsonpath={.status.podIP}"
+        "-o", "jsonpath={.spec.nodeName}"
     )
-    $svc = Invoke-KubectlText -Arguments @(
-        "get", "svc", "rabbitmq-external", "-n", $Namespace,
-        "-o", "jsonpath={.spec.type}"
+    $nodeIp = Invoke-KubectlText -Arguments @(
+        "get", "node", $nodeName,
+        "-o", "jsonpath={.status.addresses[?(@.type=='InternalIP')].address}"
     )
-    if ($podIp -and $svc -eq "NodePort") {
-        Write-Host "rabbitmq-external NodePort OK (podIP=$podIp)" -ForegroundColor Green
-        break
-    }
-    Start-Sleep -Seconds 5
-    $podIp = ""
-}
-if (-not $podIp) {
-    throw "rabbitmq-external / rabbitmq-0 not ready. Check RabbitMQ pod labels/selector."
-}
-
-$nodeName = Invoke-KubectlText -Arguments @(
-    "get", "pod", "rabbitmq-0", "-n", $Namespace,
-    "-o", "jsonpath={.spec.nodeName}"
-)
-if (-not $nodeName) {
-    throw "Cannot resolve node for rabbitmq-0"
-}
-
-$nodeIp = Invoke-KubectlText -Arguments @(
-    "get", "node", $nodeName,
-    "-o", "jsonpath={.status.addresses[?(@.type=='InternalIP')].address}"
-)
-if (-not $nodeIp) {
-    throw "Cannot resolve InternalIP for node $nodeName"
-}
-
-Write-Host "RabbitMQ node=$nodeName ip=$nodeIp nodePort=$NodePort" -ForegroundColor Green
-
-# Optional local reachability check (VPN)
-try {
-    $tnc = Test-NetConnection -ComputerName $nodeIp -Port $NodePort -WarningAction SilentlyContinue
-    if ($tnc.TcpTestSucceeded) {
-        Write-Host "TCP $nodeIp`:$NodePort reachable from this machine." -ForegroundColor Green
-    } else {
-        Write-Host "WARN: TCP $nodeIp`:$NodePort not reachable from here (VPN/SG?). GPU may still reach it." -ForegroundColor Yellow
-    }
-} catch {
-    Write-Host "WARN: reachability check skipped: $_" -ForegroundColor Yellow
+    Write-Host "Legacy NodePort: $nodeIp`:$NodePort (GPU worker PoC only)" -ForegroundColor Yellow
+} else {
+    Write-Host "RabbitMQ NodePort skipped (Method B — GPU는 RabbitMQ에 연결하지 않음)." -ForegroundColor DarkGray
 }
 
 if ($env:SKIP_GPU_SYNC -eq "1") {
-    Write-Host "SKIP_GPU_SYNC=1 — GPU .env update skipped."
-    Write-Host "Manual: RABBITMQ_HOST=$nodeIp  RABBITMQ_PORT=$NodePort"
+    Write-Host "SKIP_GPU_SYNC=1 — GPU SSH 단계 건너뜀."
+    Write-Host "Method B sync done." -ForegroundColor Green
     exit 0
 }
 
 $gpuHost = $env:GPU_SSH_HOST
 if (-not $gpuHost) {
     Write-Host ""
-    Write-Host "GPU_SSH_HOST not set — NodePort only. Set env to auto-update GPU worker:" -ForegroundColor Yellow
-    Write-Host "  `$env:GPU_SSH_HOST = '58.127.241.84'"
+    Write-Host "GPU_SSH_HOST not set — EKS 검증만 완료. GPU worker 중지·Gateway 로컬 확인은 수동:" -ForegroundColor Yellow
+    Write-Host "  `$env:GPU_SSH_HOST = '58.151.205.220'"
     Write-Host "  `$env:GPU_SSH_USER = 'sk4team'"
     Write-Host "  `$env:GPU_SSH_KEY_PATH = `"`$env:USERPROFILE\.ssh\id_ed25519`""
-    Write-Host "Then: RABBITMQ_HOST=$nodeIp  RABBITMQ_PORT=$NodePort"
+    Write-Host "  pkill -f gpu_worker.rabbitmq_worker"
+    $localGwHint = if ($env:GPU_GATEWAY_LOCAL_URL) { $env:GPU_GATEWAY_LOCAL_URL.TrimEnd("/") } else { "http://127.0.0.1:8000" }
+    Write-Host "  curl -sf $localGwHint/health"
+    Write-Host "Method B sync done (EKS only)." -ForegroundColor Green
     exit 0
 }
 
 $gpuUser = if ($env:GPU_SSH_USER) { $env:GPU_SSH_USER } else { "sk4team" }
 $remoteRoot = if ($env:GPU_REMOTE_ROOT) { $env:GPU_REMOTE_ROOT } else { "forenShield-ai" }
+$gpuGatewayLocal = if ($env:GPU_GATEWAY_LOCAL_URL) { $env:GPU_GATEWAY_LOCAL_URL.TrimEnd("/") } else { "http://127.0.0.1:8000" }
 
 $keyPath = $env:GPU_SSH_KEY_PATH
 if (-not $keyPath) {
@@ -145,7 +252,7 @@ if (-not $keyPath) {
     }
 }
 if (-not $keyPath -or -not (Test-Path $keyPath)) {
-    throw "SSH key not found. Set GPU_SSH_KEY_PATH or install key under ~/.ssh (password SSH is not automated)."
+    throw "SSH key not found. Set GPU_SSH_KEY_PATH or install key under ~/.ssh."
 }
 
 $sshTarget = "${gpuUser}@${gpuHost}"
@@ -156,58 +263,63 @@ $sshArgs = @(
     "-o", "ConnectTimeout=20"
 )
 
-Write-Host "Updating GPU worker .env via $sshTarget ..."
+Write-Host "GPU Method B check via $sshTarget ..."
 
-# Remote bash: set HOST/PORT separately (gpu_worker/config.py uses both)
 $remoteBash = @"
 set -euo pipefail
-ROOT="`$HOME/$remoteRoot"
-ENV_FILE="`$ROOT/gpu_worker/.env"
-mkdir -p "`$ROOT/logs" "`$ROOT/gpu_worker"
-touch "`$ENV_FILE"
-# drop old host/port lines (including host:port form)
-grep -vE '^(RABBITMQ_HOST|RABBITMQ_PORT)=' "`$ENV_FILE" > "`$ENV_FILE.tmp" || true
-printf 'RABBITMQ_HOST=%s\n' '$nodeIp' >> "`$ENV_FILE.tmp"
-printf 'RABBITMQ_PORT=%s\n' '$NodePort' >> "`$ENV_FILE.tmp"
-mv "`$ENV_FILE.tmp" "`$ENV_FILE"
-echo "Updated `$ENV_FILE:"
-grep -E '^(RABBITMQ_HOST|RABBITMQ_PORT)=' "`$ENV_FILE"
-cd "`$ROOT"
-# Non-interactive SSH has no login PATH — use project venv (not bare `python`)
-PY=""
-if [ -x "`$ROOT/.venv/bin/python" ]; then
-  PY="`$ROOT/.venv/bin/python"
-elif [ -x "`$ROOT/venv/bin/python" ]; then
-  PY="`$ROOT/venv/bin/python"
+GW_LOCAL='$gpuGatewayLocal'
+echo '--- stop legacy gpu_worker (Method B uses EKS ai-fastapi consumer) ---'
+if pgrep -af 'gpu_worker.rabbitmq_worker' >/dev/null 2>&1; then
+  pkill -f 'gpu_worker.rabbitmq_worker' || true
+  sleep 1
+fi
+if pgrep -af 'gpu_worker.rabbitmq_worker' >/dev/null 2>&1; then
+  echo 'ERROR: gpu_worker still running — stop it before Method B analysis.' >&2
+  pgrep -af 'gpu_worker.rabbitmq_worker' >&2 || true
+  exit 1
+fi
+echo 'gpu_worker: not running (OK)'
+
+echo '--- GPU Gateway local health ---'
+HEALTH="`${GW_LOCAL%/}/health"
+INFER="`${GW_LOCAL%/}/infer"
+if command -v curl >/dev/null 2>&1; then
+  curl -sfS --max-time 15 "`$HEALTH"
+  echo ""
 elif command -v python3 >/dev/null 2>&1; then
-  PY="`$(command -v python3)"
-elif command -v python >/dev/null 2>&1; then
-  PY="`$(command -v python)"
+  python3 -c "import urllib.request; r=urllib.request.urlopen('`$HEALTH', timeout=15); print(r.read(200).decode())"
 else
-  echo "ERROR: no python found (expected `$ROOT/.venv/bin/python)" >&2
-  exit 1
+  echo "WARN: no curl/python3 for local gateway health" >&2
 fi
-echo "Using Python: `$PY"
-pkill -f 'gpu_worker.rabbitmq_worker' || true
-sleep 1
-nohup "`$PY" -m gpu_worker.rabbitmq_worker >> logs/worker.log 2>&1 &
-sleep 2
-if ! pgrep -af 'gpu_worker.rabbitmq_worker' >/dev/null; then
-  echo "ERROR: worker failed to start. Last log lines:" >&2
-  tail -n 40 logs/worker.log >&2 || true
-  exit 1
+
+echo '--- POST /infer route (expect 422/500/503, not 404) ---'
+PROBE='{"case_id":"wake","evidence_id":0,"analysis_request_id":0,"evidence_path":"s3://probe/x.mp4"}'
+if command -v curl >/dev/null 2>&1; then
+  code="`$(curl -sS -o /tmp/fs_infer_probe.out -w '%{http_code}' -X POST "`$INFER" -H 'Content-Type: application/json' -d "`$PROBE" --max-time 20 || true)"
+  echo "POST /infer HTTP `$code"
+  if [ "`$code" = "404" ] || [ "`$code" = "405" ]; then
+    echo 'ERROR: /infer not found — deploy ai-forensic with infer router on GPU' >&2
+    exit 1
+  fi
 fi
-echo '--- worker running ---'
-pgrep -af 'gpu_worker.rabbitmq_worker' || true
-echo '--- worker.log (tail) ---'
-tail -n 30 logs/worker.log || true
+
+if systemctl is-active --quiet forenshield-ai-gateway 2>/dev/null; then
+  echo 'systemd forenshield-ai-gateway: active'
+elif systemctl is-active --quiet forenshield-ai-gateway.service 2>/dev/null; then
+  echo 'systemd forenshield-ai-gateway.service: active'
+else
+  echo 'systemd gateway unit not active (manual uvicorn may still be OK if health passed)'
+fi
+
+ss -lntp 2>/dev/null | grep -E ':8000\b' || netstat -lntp 2>/dev/null | grep -E ':8000\b' || true
+echo 'GPU Method B SSH checks OK'
 "@
 
 $remoteBash = $remoteBash -replace "`r`n", "`n"
 
 $remoteBash | & ssh @sshArgs $sshTarget "bash -s"
 if ($LASTEXITCODE -ne 0) {
-    throw "GPU SSH sync failed (exit $LASTEXITCODE). Check VPN, key auth, and GPU_SSH_* env."
+    throw "GPU SSH sync failed (exit $LASTEXITCODE). Check VPN, key auth, Gateway on :8000, and GPU_SSH_* env."
 }
 
-Write-Host "GPU RabbitMQ sync done: ${nodeIp}:$NodePort" -ForegroundColor Green
+Write-Host "Method B sync done: ai-fastapi consumer + GPU Gateway $gatewayUrl" -ForegroundColor Green
