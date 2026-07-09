@@ -33,6 +33,20 @@ spec:
           env:
             - name: HOSTNAME
               value: "0.0.0.0"
+            - name: AI_VISUALIZATION_ENABLED
+              value: "1"
+            - name: AI_VISUALIZATION_UPLOAD
+              value: "1"
+            - name: AI_VISUALIZATION_OVERLAY
+              value: "1"
+            - name: AI_VISUALIZATION_MAX_FRAMES
+              value: "3"
+            - name: AI_VISUALIZATION_OVERLAY_MAX_SEC
+              value: "60"
+            - name: AI_VISUALIZATION_PRESIGN_SEC
+              value: "604800"
+            - name: S3_EVIDENCE_BUCKET
+              value: "forenshield-evidence-877044078824"
           envFrom:
             - configMapRef:
                 name: app-config
