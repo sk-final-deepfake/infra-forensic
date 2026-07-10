@@ -4,6 +4,6 @@ metadata:
   name: frontend-config
   namespace: forenshield
 data:
-  NEXT_PUBLIC_API_URL: https://forensheildjangdochi.com/api
+  NEXT_PUBLIC_API_URL: https://forensheildjangdochi.com
   NEXT_PUBLIC_USE_MOCK_API: "false"
   NODE_ENV: production
