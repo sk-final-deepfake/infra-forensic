@@ -17,22 +17,36 @@ type OffchainRef struct {
 	CustodyLogBundleRef string `json:"custodyLogBundleRef,omitempty"`
 }
 
+type AnalysisModelRef struct {
+	Name       string `json:"name,omitempty"`
+	Version    string `json:"version,omitempty"`
+	Identifier string `json:"identifier,omitempty"`
+}
+
+type AnalysisModuleRef struct {
+	Module  string `json:"module,omitempty"`
+	Name    string `json:"name,omitempty"`
+	Version string `json:"version,omitempty"`
+}
+
 // AnchorRecord is the immutable ledger value for a hash anchor.
 type AnchorRecord struct {
-	SubjectHash     string      `json:"subjectHash"`
-	AnchorType      string      `json:"anchorType"`
-	ClientID        string      `json:"clientId"`
-	EvidenceID      string      `json:"evidenceId,omitempty"`
-	ReportID        string      `json:"reportId,omitempty"`
-	MerkleBatchDate string      `json:"merkleBatchDate,omitempty"`
-	MerkleLeafCount string      `json:"merkleLeafCount,omitempty"`
-	Signature       string      `json:"signature,omitempty"`
-	SignerCertHash  string      `json:"signerCertHash,omitempty"`
-	CertVerified    *bool       `json:"certVerified,omitempty"`
-	OffchainLogHash string      `json:"offchainLogHash,omitempty"`
-	OffchainRef     *OffchainRef `json:"offchainRef,omitempty"`
-	AnchoredAt      string      `json:"anchoredAt"`
-	TxID            string      `json:"txId,omitempty"`
+	SubjectHash     string              `json:"subjectHash"`
+	AnchorType      string              `json:"anchorType"`
+	ClientID        string              `json:"clientId"`
+	EvidenceID      string              `json:"evidenceId,omitempty"`
+	ReportID        string              `json:"reportId,omitempty"`
+	MerkleBatchDate string              `json:"merkleBatchDate,omitempty"`
+	MerkleLeafCount string              `json:"merkleLeafCount,omitempty"`
+	Signature       string              `json:"signature,omitempty"`
+	SignerCertHash  string              `json:"signerCertHash,omitempty"`
+	CertVerified    *bool               `json:"certVerified,omitempty"`
+	OffchainLogHash string              `json:"offchainLogHash,omitempty"`
+	OffchainRef     *OffchainRef        `json:"offchainRef,omitempty"`
+	AnalysisModel   *AnalysisModelRef   `json:"analysisModel,omitempty"`
+	AnalysisModules []AnalysisModuleRef `json:"analysisModules,omitempty"`
+	AnchoredAt      string              `json:"anchoredAt"`
+	TxID            string              `json:"txId,omitempty"`
 }
 
 type AnchorContract struct {
@@ -56,6 +70,8 @@ func (c *AnchorContract) AnchorHash(
 	certVerified string,
 	offchainLogHash string,
 	offchainRefJson string,
+	analysisModelJson string,
+	analysisModulesJson string,
 ) error {
 	subjectHash = strings.TrimSpace(subjectHash)
 	anchorType = strings.TrimSpace(anchorType)
@@ -89,6 +105,8 @@ func (c *AnchorContract) AnchorHash(
 		CertVerified:    parseOptionalBool(certVerified),
 		OffchainLogHash: strings.TrimSpace(offchainLogHash),
 		OffchainRef:     parseOffchainRef(offchainRefJson),
+		AnalysisModel:   parseAnalysisModel(analysisModelJson),
+		AnalysisModules: parseAnalysisModules(analysisModulesJson),
 		AnchoredAt:      time.Now().UTC().Format(time.RFC3339),
 		TxID:            ctx.GetStub().GetTxID(),
 	}
@@ -145,6 +163,43 @@ func parseOffchainRef(raw string) *OffchainRef {
 		return nil
 	}
 	return &ref
+}
+
+func parseAnalysisModel(raw string) *AnalysisModelRef {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil
+	}
+	var model AnalysisModelRef
+	if err := json.Unmarshal([]byte(raw), &model); err != nil {
+		return nil
+	}
+	if model.Name == "" && model.Version == "" && model.Identifier == "" {
+		return nil
+	}
+	return &model
+}
+
+func parseAnalysisModules(raw string) []AnalysisModuleRef {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil
+	}
+	var modules []AnalysisModuleRef
+	if err := json.Unmarshal([]byte(raw), &modules); err != nil {
+		return nil
+	}
+	filtered := make([]AnalysisModuleRef, 0, len(modules))
+	for _, module := range modules {
+		if module.Module == "" && module.Name == "" && module.Version == "" {
+			continue
+		}
+		filtered = append(filtered, module)
+	}
+	if len(filtered) == 0 {
+		return nil
+	}
+	return filtered
 }
 
 func composeKey(anchorType, subjectHash, evidenceId, reportId, merkleBatchDate string) (string, error) {

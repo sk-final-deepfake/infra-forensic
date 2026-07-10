@@ -40,6 +40,16 @@ function offchainRefArg(value) {
   return JSON.stringify(value);
 }
 
+function jsonArg(value) {
+  if (value == null) {
+    return "";
+  }
+  if (typeof value === "string") {
+    return value.trim();
+  }
+  return JSON.stringify(value);
+}
+
 async function getGateway() {
   if (!gatewayPromise) {
     gatewayPromise = createGateway();
@@ -104,6 +114,8 @@ async function submitAnchor(payload) {
       certVerifiedArg(payload.certVerified),
       asString(payload.offchainLogHash),
       offchainRefArg(payload.offchainRef),
+      jsonArg(payload.analysisModel),
+      jsonArg(payload.analysisModules),
     ],
   });
 
