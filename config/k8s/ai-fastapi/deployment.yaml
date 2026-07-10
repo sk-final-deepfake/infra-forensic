@@ -47,6 +47,8 @@ spec:
               value: "604800"
             - name: S3_EVIDENCE_BUCKET
               value: "forenshield-evidence-877044078824"
+            - name: AI_VISUALIZATION_PREFIX
+              value: "deepfake/artifacts/analysis/{evidence_id}/{analysis_request_id}"
           envFrom:
             - configMapRef:
                 name: app-config
