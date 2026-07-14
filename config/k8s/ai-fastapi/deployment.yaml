@@ -33,6 +33,8 @@ spec:
           env:
             - name: HOSTNAME
               value: "0.0.0.0"
+            - name: AI_CONSUMER_ONLY
+              value: "1"
             # Method B: analysis from GPU /infer; baked overlays via overlay.queue only.
             - name: AI_VISUALIZATION_ENABLED
               value: "0"
