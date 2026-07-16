@@ -18,6 +18,10 @@ data:
   # 스키마가 안정되면 validate로 되돌릴 것
   SPRING_JPA_HIBERNATE_DDL_AUTO: update
   SERVER_PORT: "8080"
+  # 최종 PDF의 QR과 PC 검증 URL에 사용되는 외부 공개 주소
+  REPORT_PUBLIC_VERIFY_BASE_URL: "https://forensheildjangdochi.com/verify"
+  REPORT_PUBLIC_VIEW_BASE_URL: "https://forensheildjangdochi.com/public-report"
+  REPORT_PUBLIC_ACCESS_TTL_DAYS: "7"
   REDIS_PORT: "6379"
   REDIS_SSL: "true"
   ANALYSIS_WORKER_MODE: ai
