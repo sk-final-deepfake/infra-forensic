@@ -25,7 +25,7 @@ spec:
         nodegroup: backend-ng
       containers:
         - name: backend
-          image: 877044078824.dkr.ecr.ap-northeast-2.amazonaws.com/forenshield-backend:b849b4d370aab92e69cc4306ab19f408f631ef7d
+          image: 877044078824.dkr.ecr.ap-northeast-2.amazonaws.com/forenshield-backend:7985821e6a8e91cb9f0403658abcf0c0fc2cfeb6
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
