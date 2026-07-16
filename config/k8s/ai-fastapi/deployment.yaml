@@ -25,7 +25,7 @@ spec:
         nodegroup: ai-fastapi-ng
       containers:
         - name: ai-fastapi
-          image: 877044078824.dkr.ecr.ap-northeast-2.amazonaws.com/forenshield-ai-fastapi:71dee0db394fe6346393bf61c56115db92aa3a4b
+          image: 877044078824.dkr.ecr.ap-northeast-2.amazonaws.com/forenshield-ai-fastapi:014dcab58a0389464618776d804a2ed710c162c9
           imagePullPolicy: Always
           ports:
             - name: http
