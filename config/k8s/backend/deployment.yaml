@@ -19,6 +19,8 @@ spec:
     metadata:
       labels:
         app: backend
+      annotations:
+        forenshield.ai/app-config-revision: "2026-07-16-public-report-urls"
     spec:
       serviceAccountName: forenshield-app   # S3 IRSA — 2번에서 이미 생성됨
       nodeSelector:
